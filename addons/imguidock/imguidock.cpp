@@ -592,7 +592,8 @@ struct DockContext
 
     void handleDrag(Dock& dock)
     {
-        Dock* dest_dock = getDockAt(GetIO().MousePos);
+        ImGuiIO &io = ImGui::GetIO();
+        Dock* dest_dock = getDockAt(io.MousePos);
 
 	SetNextWindowBgAlpha(0.0f);
 	Begin("##Overlay",
@@ -605,8 +606,15 @@ struct DockContext
         canvas->PushClipRectFullScreen();
 
         ImU32 docked_color = GetColorU32(ImGuiCol_FrameBg);
-	docked_color = (docked_color & 0x00ffFFFF) | 0x80000000;
-        dock.pos = GetIO().MousePos - m_drag_offset;
+        docked_color = (docked_color & 0x00ffFFFF) | 0x80000000;
+
+        bool is_mouse_pos_valid = ImGui::IsMousePosValid(&io.MousePos);
+
+        if (is_mouse_pos_valid)
+        {
+            dock.pos = io.MousePos - m_drag_offset;
+        }
+
         if (dest_dock)
         {
             if (dockSlots(dock,
@@ -628,7 +636,7 @@ struct DockContext
         canvas->AddRectFilled(dock.pos, dock.pos + dock.size, docked_color);
         canvas->PopClipRect();
 
-        if (!IsMouseDown(0))
+        if (!IsMouseDown(0) || !is_mouse_pos_valid)
         {
             dock.status = Status_Float;
             dock.location[0] = 0;
@@ -1153,28 +1161,65 @@ struct DockContext
         }
         
         m_current = &dock;
-        if (dock.status == Status_Dragged) handleDrag(dock);
+
+        bool clamp_rect = false;
+
+        if (dock.status == Status_Dragged)
+        {
+            handleDrag(dock);
+
+            if (dock.status == Status_Float)
+            {
+                // The window's float size could be smaller. Don't let it end
+                // up off screen.
+                clamp_rect = true;
+            }
+        }
 
         bool is_float = dock.status == Status_Float;
 
         if (is_float)
         {
+            const ImVec2 old_size(dock.floatmode_size.x>0 ? dock.floatmode_size.x : dock.size.x,
+                                  dock.floatmode_size.y>0 ? dock.floatmode_size.y : dock.size.y);
+
+            if (clamp_rect)
+            {
+                ImGuiIO &io = ImGui::GetIO();
+
+                ImVec2 padding = ImMax(GImGui->Style.DisplayWindowPadding,
+                                       GImGui->Style.DisplaySafeAreaPadding);
+
+                if (dock.pos.x + old_size.x < padding.x)
+                {
+                    dock.pos.x = padding.x - old_size.x;
+                }
+
+                dock.pos.x = ImMin(dock.pos.x, io.DisplaySize.x - padding.x);
+
+                if (dock.pos.y + old_size.y < padding.y)
+                {
+                    dock.pos.y = padding.y - old_size.y;
+                }
+
+                dock.pos.y = ImMin(dock.pos.y, io.DisplaySize.y - padding.y);
+            }
+
             SetNextWindowPos(dock.pos);
-	    const ImVec2 old_size(dock.floatmode_size.x>0 ? dock.floatmode_size.x : dock.size.x,
-				  dock.floatmode_size.y>0 ? dock.floatmode_size.y : dock.size.y);
-	    SetNextWindowSize(old_size);
-	    dock.size = old_size;
+            SetNextWindowSize(old_size);
+
+            dock.size = old_size;
             bool ret = Begin(label,
                              opened,
-			     ImGuiWindowFlags_NoCollapse | extra_flags);
+                             ImGuiWindowFlags_NoCollapse | extra_flags);
             m_end_action = EndAction_End;
             dock.pos = GetWindowPos();
-	    dock.size = GetWindowSize();
-	    if (dock.size.x!=old_size.x && dock.floatmode_size.x>=0) dock.floatmode_size.x = dock.size.x;
-	    if (dock.size.y!=old_size.y && dock.floatmode_size.y>=0) dock.floatmode_size.y = dock.size.y;
+            dock.size = GetWindowSize();
+            if (dock.size.x!=old_size.x && dock.floatmode_size.x>=0) dock.floatmode_size.x = dock.size.x;
+            if (dock.size.y!=old_size.y && dock.floatmode_size.y>=0) dock.floatmode_size.y = dock.size.y;
 
-	    // Dbg (to remove)
-	    //if (ImGui::IsWindowHovered()) ImGui::SetTooltip("dock.size:\t(%1.f,%1.f)\\ndock.floatmode_size\t(%1.f,%1.f)\n",dock.size.x,dock.size.y,dock.floatmode_size.x,dock.floatmode_size.y);
+            // Dbg (to remove)
+            //if (ImGui::IsWindowHovered()) ImGui::SetTooltip("dock.size:\t(%1.f,%1.f)\\ndock.floatmode_size\t(%1.f,%1.f)\n",dock.size.x,dock.size.y,dock.floatmode_size.x,dock.floatmode_size.y);
 
             ImGuiContext& g = *GImGui;
 
@@ -1184,6 +1229,7 @@ struct DockContext
                 doUndock(dock);
                 dock.status = Status_Dragged;
             }
+
             return ret;
         }
 

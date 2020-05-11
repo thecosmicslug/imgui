@@ -829,12 +829,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             float pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0 ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
             float pad_right = (p_opened != NULL) ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
+            if (p_undocked!=NULL) pad_right+=2.0f*(g.FontSize + style.ItemInnerSpacing.x);
 
             if (style.WindowTitleAlign.x > 0.0f) pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
             text_min.x += pad_left;
             text_max.x -= pad_right;
             clip_rect.Min = ImVec2(text_min.x, window->Pos.y);
-            RenderTextClipped(text_min, text_max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
+            RenderTextClipped(text_min, text_max, name, NULL, &text_size, ImVec2(style.WindowTitleAlign.x<0.5f?style.WindowTitleAlign.x:0.5f,style.WindowTitleAlign.y), &clip_rect);
 
             /*// Title bar text (with: horizontal alignment, avoiding collapse/close button, optional "unsaved document" marker)
             // FIXME: Refactor text alignment facilities along with RenderText helpers, this is too much code..
