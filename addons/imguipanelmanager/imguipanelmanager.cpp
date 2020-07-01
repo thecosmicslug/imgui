@@ -291,14 +291,16 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
 
         // Setup draw list and outer clipping rectangle
-        window->DrawList->Clear();
+        //window->DrawList->Clear();                // ???
+        window->DrawList->_ResetForNewFrame();
+        IM_ASSERT(window->DrawList->CmdBuffer.Size == 1 && window->DrawList->CmdBuffer[0].ElemCount == 0);
         window->DrawList->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         ImRect viewport_rect(GetViewportRect());
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip)
             PushClipRect(parent_window->ClipRect.Min, parent_window->ClipRect.Max, true);
         else
-            PushClipRect(viewport_rect.Min, viewport_rect.Max, true);
+            PushClipRect(viewport_rect.Min, viewport_rect.Max, false);  // 2020/06/21: Last arg was 'true', but then no window shows up
 
         /*if (window_just_activated_by_user)
         {

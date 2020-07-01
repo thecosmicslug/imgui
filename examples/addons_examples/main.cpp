@@ -1644,7 +1644,7 @@ void DrawGL()	// Mandatory
                 IM_ASSERT(sdfTextChunk);
 
                 //static const char* sdfSampleText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
-        static const char* sdfSampleText = "Lorem ipsum <COLOR=00FF00FF>dolor</COLOR> sit <I>amet</I>, consectetur <B>adipiscing</B> elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n<SCALE=2.0><HALIGN=LEFT>Left<HALIGN=CENTER>Center<HALIGN=RIGHT>Right</SCALE>";
+                static const char* sdfSampleText = "Lorem ipsum <COLOR=00FF00FF>dolor</COLOR> sit <I>amet</I>, consectetur <B>adipiscing</B> elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n<SCALE=2.0><HALIGN=LEFT>Left<HALIGN=CENTER>Center<HALIGN=RIGHT>Right</SCALE>";
                 strcpy(sdfTextBuffer,sdfSampleText);
                 ImGui::SdfAddTextWithTags(sdfTextChunk,sdfTextBuffer); // Actually we can append multiple of these calls together
 
@@ -2260,7 +2260,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
     gImGuiInitParams.gFpsDynamicInsideImGui = false; // If true when inside ImGui, the FPS is not constant (at gFpsClampInsideImGui), but goes from a very low minimum value to gFpsClampInsideImGui dynamically. Useful for editors and to save GPU and CPU power.
     gImGuiInitParams.gFpsClampOutsideImGui = 10.f;  // Optional Max allowed FPS (!=0, default -1 => unclamped). Useful for setting a different FPS for your main rendering.
 
-//#   define TEST_IMAGE_GLYPHS    // Experimental (currently it works only with user glyphs from uniformly sized tiles in images (or from a whole image) (good for image icons), but we could extend the code in the future if requested to support font glyphs of different widths)
+//#   define TEST_IMAGE_GLYPHS      // Experimental (currently it works only with user glyphs from uniformly sized tiles in images (or from a whole image) (good for image icons), but we could extend the code in the future if requested to support font glyphs of different widths)
+                                    // Warning: this doesn't seem to work correctly when YES_IMGUIFREETYPE is defined
 #   ifdef TEST_IMAGE_GLYPHS
     // 'S','P','F'
     ImImpl_InitParams::CustomFontGlyph::ImageData imageData(512,512,"Tile8x8.png",8,8); // The image we want to use for our glyphs
@@ -2276,6 +2277,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 
     // Not sure how to specify an ImWchar using a custom definition (like FontAwesome in main2.cpp)...
 #   endif //TEST_IMAGE_GLYPHS
+
+
 
 
 #   ifndef IMGUI_USE_AUTO_BINDING_WINDOWS  // IMGUI_USE_AUTO_ definitions get defined automatically (e.g. do NOT touch them!)

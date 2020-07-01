@@ -47,6 +47,9 @@ with the following changes:
 
 namespace ImGui {
 
+// Mandatory Stuff--------------------------------------------------------------------------------
+void SdfDestroy();
+
 // Charsets --------------------------------------------------------------------------------------
 struct SdfCharsetProperties {
     bool flipYOffset;
@@ -148,6 +151,7 @@ enum SDFAnimationMode {
 
     SDF_AM_BLINK,
     SDF_AM_PULSE,
+    SDF_AM_FLASH,
     SDF_AM_TYPING
 };
 struct SdfAnimationKeyFrame {

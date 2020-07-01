@@ -331,17 +331,40 @@ struct SdfTextChunk {
             tmpKeyFrame.scale.x=tmpKeyFrame.scale.y = 1.0f+((0.005f*20.f)/(float)(this->props.maxNumTextLines))*sinf(tmpLocalTime*10.0f);
             }
             break;
+        case SDF_AM_FLASH:   {
+            if (tmpLocalTime<=1.0f) {
+                float tmp;
+                if (tmpLocalTime<=0.5f) tmp = tmpLocalTime*2.f;                 // 0->1
+                else                    tmp = 1.f-((tmpLocalTime-0.5f)*2.f);    // 1->0
+#               ifndef IMGUISDF_AM_FLASH_ALORITHM
+#                   define IMGUISDF_AM_FLASH_ALORITHM 3
+#               endif
+                tmpKeyFrame.alpha =
+#               if IMGUISDF_AM_FLASH_ALORITHM==0
+                        tmp
+#               elif IMGUISDF_AM_FLASH_ALORITHM==1
+                        tmp*tmp
+#               elif IMGUISDF_AM_FLASH_ALORITHM==2
+                        tmp * tmp * (3.f - 2.f * tmp)
+#               else
+                        tmp * tmp * tmp * (tmp * (tmp * 6.f - 15.f) + 10.f)
+#               endif
+                ;
+            }
+            else {setMute(true);animationStartTime=-1.f;animationMode=SDF_AM_NONE;return (tmpVisible=false);}
+        }
+            break;            
         case SDF_AM_TYPING:   {
             static const float timePerChar = 0.15f;
             const int numChars = buffer->numChars();
             const float timeForAllChars = timePerChar * numChars;
-            if (timeForAllChars>0)  {
+            //if (timeForAllChars>0)  {
                 if (tmpLocalTime<=timeForAllChars)	{
-		    tmpKeyFrame.endChar = (int)(((tmpLocalTime/timeForAllChars)*(float)(numChars))+0.5f);
+		    		tmpKeyFrame.endChar = (int)(((tmpLocalTime/timeForAllChars)*(float)(numChars))+0.5f);
                 }
                 else {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}
-            }
-            else {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}
+            //}
+            //else {setMute(false);animationStartTime=-1.f;animationMode=SDF_AM_NONE;}
         }
             break;
         case SDF_AM_MANUAL: {
@@ -407,14 +430,19 @@ struct SdfShaderProgram {
     GLint uniformLocationSampler;
     GLint uniformLocationOffsetAndScale;
     GLint uniformLocationAlphaAndShadow;
+    bool wasLoadShaderProgramCalled;    // if loadShaderProgram(...) fails, we don't want to keep calling it because program==0. So we can check this.
     SdfShaderProgram() : program(0),uniformLocationOrthoMatrix(-1),uniformLocationSampler(-1),
-    uniformLocationOffsetAndScale(-1),uniformLocationAlphaAndShadow(-1) {}
+    uniformLocationOffsetAndScale(-1),uniformLocationAlphaAndShadow(-1),wasLoadShaderProgramCalled(false) {}
     ~SdfShaderProgram() {destroy();}
     void destroy() {
         if (program) {glDeleteProgram(program);program=0;}
+        wasLoadShaderProgramCalled=false;
+        uniformLocationOrthoMatrix=uniformLocationSampler=
+        uniformLocationOffsetAndScale=uniformLocationAlphaAndShadow=-1;        
     }
     bool loadShaderProgram(bool forOutlineShaderProgram) {
         if (program) return true;
+        wasLoadShaderProgramCalled = true;
         program = CompileShaderProgramAndSetCorrectAttributeLocations(forOutlineShaderProgram);
         if (program)    {
             uniformLocationOrthoMatrix = glGetUniformLocation(program,"ortho");
@@ -1447,14 +1475,18 @@ struct SdfStaticStructs {
     ImVectorEx<SdfAnimation*> gSdfAnimations;
 
     SdfStaticStructs() {}
-    ~SdfStaticStructs() {
-        DestroyAllAnimations();
-        DestroyAllTextChunks();
-        DestroyAllCharsets();
-    }
+    ~SdfStaticStructs() {DestroyAll();}
     void DestroyAllAnimations();
     void DestroyAllTextChunks();
     void DestroyAllCharsets();
+    void DestroyAll() {
+        DestroyAllAnimations();
+        DestroyAllTextChunks();
+        DestroyAllCharsets();
+        // Are these necessary? YES
+        for (int i=0;i<2;i++) {gSdfShaderPrograms[i].destroy();}
+        gSdfTextDefaultColor=SdfTextColor(ImVec4(1,1,1,1));
+    }    
 };
 static SdfStaticStructs gSdfInit;
 void SdfStaticStructs::DestroyAllAnimations()  {
@@ -1489,6 +1521,7 @@ void SdfStaticStructs::DestroyAllCharsets()  {
     }
     gSdfInit.gSdfCharsets.clear();
 }
+void SdfDestroy() {gSdfInit.DestroyAll();}
 
 
 #if (!defined(NO_IMGUISDF_LOAD) || (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD)))
@@ -1916,7 +1949,7 @@ void SdfRender(const ImVec4* pViewportOverride) {
     ImGuiIO& io = ImGui::GetIO();
     static ImVec2 displaySizeLast = io.DisplaySize;
     const ImVec2 displaySize = pViewportOverride ? ImVec2(pViewportOverride->z,pViewportOverride->w) : io.DisplaySize;
-    if (displaySize.x==0 || displaySize.y==0) return;
+    if (displaySize.x==0 || displaySize.y==0 || gSdfInit.gSdfTextChunks.size()==0) return;
     const bool screenSizeChanged = displaySizeLast.x!=displaySize.x || displaySizeLast.y!=displaySize.y;
     if (screenSizeChanged) {
         displaySizeLast = displaySize;
@@ -1926,15 +1959,25 @@ void SdfRender(const ImVec4* pViewportOverride) {
     }
 
     bool hasRegularFonts=false,hasOutlineFonts=false;float globalTime = ImGui::GetTime();
+    size_t num_muted_chunks = 0;    
     for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++) {
         SdfTextChunk* c = gSdfInit.gSdfTextChunks[i];
-        if (c->textBits.size()==0 || !c->checkVisibleAndEvalutateAnimationIfNecessary(globalTime)) continue;
-        hasRegularFonts|=(c->buffer->type==0 || (c->buffer->type&(SDF_BT_SHADOWED)));
-        hasOutlineFonts|=(c->buffer->type&(SDF_BT_OUTLINE));
-        //if (hasRegularFonts && hasOutlineFonts) break;    // We cannot exit early, because we must evalutate checkVisibleAndEvalutateAnimationIfNecessary(...) for all the text chunks
+        if (!c->mute)   {
+	        if (c->textBits.size()==0 || !c->checkVisibleAndEvalutateAnimationIfNecessary(globalTime)) continue;
+    	    hasRegularFonts|=(c->buffer->type==0 || (c->buffer->type&(SDF_BT_SHADOWED)));
+    	    hasOutlineFonts|=(c->buffer->type&(SDF_BT_OUTLINE));
+    	    //if (hasRegularFonts && hasOutlineFonts) break;    // We cannot exit early, because we must evalutate checkVisibleAndEvalutateAnimationIfNecessary(...) for all the text chunks
+    	}
+    	else {
+		    ++num_muted_chunks;
+            c->checkVisibleAndEvalutateAnimationIfNecessary(globalTime);    // not sure if we must still evalutate this (but it takes just a line of code if 'mute' is true)            	
+    	}
     }
 
-    if (!hasRegularFonts && !hasOutlineFonts) return;
+    if ((!hasRegularFonts && !hasOutlineFonts) || num_muted_chunks==gSdfInit.gSdfTextChunks.size()) {
+   		displaySizeLast=ImVec2(-1,-1); // for next loop
+    	return;
+   	}
 
 
     const float fb_x = pViewportOverride ? pViewportOverride->x*io.DisplayFramebufferScale.x : 0.f;
@@ -1944,16 +1987,10 @@ void SdfRender(const ImVec4* pViewportOverride) {
     glViewport((GLint)fb_x, (GLint)fb_y, (GLsizei)fb_width, (GLsizei)fb_height);
     //fprintf(stderr,"%d %d %d %d (%d %d)\n",(GLint)fb_x, (GLint)fb_y, (GLsizei)fb_width, (GLsizei)fb_height,(int)io.DisplaySize.x,(int)io.DisplaySize.y);
 
-    if (hasRegularFonts && !gSdfShaderPrograms[0].program) {
-        static bool done = false;
-        if (done) return;
-        done = true;
+    if (hasRegularFonts && !gSdfShaderPrograms[0].program && !gSdfShaderPrograms[0].wasLoadShaderProgramCalled) {
         if (!gSdfShaderPrograms[0].loadShaderProgram(false)) return;
     }
-    if (hasOutlineFonts && !gSdfShaderPrograms[1].program) {
-        static bool done = false;
-        if (done) return;
-        done = true;
+    if (hasOutlineFonts && !gSdfShaderPrograms[1].program && !gSdfShaderPrograms[1].wasLoadShaderProgramCalled) {
         if (!gSdfShaderPrograms[1].loadShaderProgram(true)) return;
     }
 
@@ -1976,7 +2013,8 @@ void SdfRender(const ImVec4* pViewportOverride) {
     if (hasRegularFonts)    {
         SdfShaderProgram& SP = gSdfShaderPrograms[0];
         glUseProgram(SP.program);
-        if (screenSizeChanged) SP.resetUniformOrtho();
+        //if (screenSizeChanged) 
+        	SP.resetUniformOrtho();
         bool isShadow = false;
         for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++) {
             SdfTextChunk* c = gSdfInit.gSdfTextChunks[i];
@@ -2010,7 +2048,8 @@ void SdfRender(const ImVec4* pViewportOverride) {
     if (hasOutlineFonts)    {
         SdfShaderProgram& SP = gSdfShaderPrograms[1];
         glUseProgram(SP.program);
-        if (screenSizeChanged) SP.resetUniformOrtho();
+        //if (screenSizeChanged) 
+        	SP.resetUniformOrtho();
         for (int i=0,isz=gSdfInit.gSdfTextChunks.size();i<isz;i++) {
             SdfTextChunk* c = gSdfInit.gSdfTextChunks[i];
             if (c->textBits.size()==0 || !c->tmpVisible) continue;
@@ -2185,7 +2224,7 @@ bool SdfTextChunkEdit(SdfTextChunk* sdfTextChunk, char* buffer, int bufferSize) 
     static const char* AnimationModeNames[SDF_AM_TYPING+1] = {"NONE","MANUAL",
                                                               "FADE_IN","ZOOM_IN","APPEAR_IN","LEFT_IN","RIGHT_IN","TOP_IN","BOTTOM_IN",
                                                               "FADE_OUT","ZOOM_OUT","APPEAR_OUT","LEFT_OUT","RIGHT_OUT","TOP_OUT","BOTTOM_OUT",
-                                                              "BLINK","PULSE","TYPING"};
+                                                              "BLINK","PULSE","FLASH","TYPING"};
     int animationMode = (int) ImGui::SdfTextChunkGetAnimationMode(sdfTextChunk);
     if (ImGui::Combo("Animation Mode##SDFAnimationMode",&animationMode,&AnimationModeNames[0],sizeof(AnimationModeNames)/sizeof(AnimationModeNames[0])))    {
         ImGui::SdfTextChunkSetAnimationMode(sdfTextChunk,(SDFAnimationMode)animationMode);
