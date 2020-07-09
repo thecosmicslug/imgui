@@ -99,6 +99,7 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[DisplayWindowPadding]\n%1.3f %1.3f\n", style.DisplayWindowPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[DisplaySafeAreaPadding]\n%1.3f %1.3f\n", style.DisplaySafeAreaPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[AntiAliasedLines]\n%d\n", style.AntiAliasedLines?1:0);
+    fprintf(f, "[AntiAliasedLinesUseTex]\n%d\n", style.AntiAliasedLinesUseTex?1:0);
     fprintf(f, "[AntiAliasedFill]\n%d\n", style.AntiAliasedFill?1:0);
     fprintf(f, "[CurveTessellationTol]\n%1.3f\n", style.CurveTessellationTol);
     fprintf(f, "[CircleSegmentMaxError]\n%1.3f\n", style.CircleSegmentMaxError);
@@ -204,7 +205,8 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 		else if (strcmp(name, "DisplayWindowPadding")==0)    {npf=2;pf[0]=&style.DisplayWindowPadding.x;pf[1]=&style.DisplayWindowPadding.y;}
                 else if (strcmp(name, "DisplaySafeAreaPadding")==0)    {npf=2;pf[0]=&style.DisplaySafeAreaPadding.x;pf[1]=&style.DisplaySafeAreaPadding.y;}
                 else if (strcmp(name, "AntiAliasedLines")==0)          {npb=1;pb[0]=&style.AntiAliasedLines;}
-		else if (strcmp(name, "AntiAliasedFill")==0 || strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedFill;}
+                else if (strcmp(name, "AntiAliasedLinesUseTex")==0)    {npb=1;pb[0]=&style.AntiAliasedLinesUseTex;}
+                else if (strcmp(name, "AntiAliasedFill")==0 || strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedFill;}
                 else if (strcmp(name, "CurveTessellationTol")==0)               {npf=1;pf[0]=&style.CurveTessellationTol;}
                 else if (strcmp(name, "CircleSegmentMaxError")==0)               {npf=1;pf[0]=&style.CircleSegmentMaxError;}
                 else if (strcmp(name, "TabRounding")==0)         {npf=1;pf[0]=&style.TabRounding;}
