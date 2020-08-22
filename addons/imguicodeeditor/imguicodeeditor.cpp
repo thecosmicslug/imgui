@@ -1365,7 +1365,7 @@ static void InitFoldingStringVectors() {
             }
             {
                 const SyntaxHighlightingType sht = SH_KEYWORD_TYPE;
-                static const char* vars[] = {"void","bool","byte","char","decimal","double","float","int","long","sbyte"
+                static const char* vars[] = {"void","bool","byte","char","decimal","double","float","int","long","sbyte",
                                              "short","uint","ushort","ulong","object","string","var","dynamic"};
                 const int varsSize = (int)sizeof(vars)/sizeof(vars[0]);foldingStrings.keywords[sht].reserve(foldingStrings.keywords[sht].size()+varsSize);for (int i=0;i<varsSize;i++) foldingStrings.keywords[sht].push_back(vars[i]);
             }
@@ -1484,8 +1484,8 @@ static void InitFoldingStringVectors() {
             "textureSize","textureOffset","texelFetch","texelFetchOffset","textureProjOffset","textureLodOffset","textureProjLodOffset","textureGrad",
             "textureGradOffset","textureProjGrad",
             "textureProjGradOffset",
-            "abs","ceil","clamp","floor","fract","max","min","mix","mod","sign","smoothstep","step","ftrasform","cross","distance","dot","faceforward"
-            "length","normalize","reflect","refract","dFdx","dFdy","fwidth","matrixCompMult","all","any","equal","greaterThan","greaterThanEqual","lessThan","lessThanEqual","not","notEqual"
+            "abs","ceil","clamp","floor","fract","max","min","mix","mod","sign","smoothstep","step","ftrasform","cross","distance","dot","faceforward",
+            "length","normalize","reflect","refract","dFdx","dFdy","fwidth","matrixCompMult","all","any","equal","greaterThan","greaterThanEqual","lessThan","lessThanEqual","not","notEqual",
             "texture","texture1D","texture2D","texture3D","textureCube",
             "textureProj","texture1DProj","texture2DProj","texture3DProj",
             "shadow","shadow1D","shadow2D","shadow1DProj","shadow2DProj",
