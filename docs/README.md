@@ -85,7 +85,7 @@ Dear ImGui allows you to **create elaborate tools** as well as very short-lived 
 
 ### How it works
 
-Check out the Wiki's [About the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#About-the-IMGUI-paradigm) section if you want to understand the core principles behind the IMGUI paradigm. An IMGUI tries to minimize superfluous state duplication, state synchronization and state retention from the user's point of view. It is less error prone (less code and less bugs) than traditional retained-mode interfaces, and lends itself to create dynamic user interfaces.
+Check out the Wiki's [About the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#about-the-imgui-paradigm) section if you want to understand the core principles behind the IMGUI paradigm. An IMGUI tries to minimize superfluous state duplication, state synchronization and state retention from the user's point of view. It is less error prone (less code and less bugs) than traditional retained-mode interfaces, and lends itself to create dynamic user interfaces.
 
 Dear ImGui outputs vertex buffers and command lists that you can easily render in your application. The number of draw calls and state changes required to render them is fairly small. Because Dear ImGui doesn't know or touch graphics state directly, you can call its functions  anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate Dear ImGui with your existing codebase.
 
@@ -98,7 +98,7 @@ Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcas
 ![screenshot demo](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v167/v167-misc.png)
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let us know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20200412.zip](http://www.dearimgui.org/binaries/imgui-demo-binaries-20200412.zip) (Windows, 1.76, built 2020/04/12, master branch) or [older demo binaries](http://www.dearimgui.org/binaries).
+- [imgui-demo-binaries-20200918.zip](https://www.dearimgui.org/binaries/imgui-demo-binaries-20200918.zip) (Windows, 1.78 WIP, built 2020/09/18, master branch) or [older demo binaries](https://www.dearimgui.org/binaries).
 
 The demo applications are not DPI aware so expect some blurriness on a 4K screen. For DPI awareness in your application, you can load/reload your font at different scale, and scale your style with `style.ScaleAllSizes()` (see [FAQ](https://www.dearimgui.org/faq)).
 
@@ -114,7 +114,7 @@ Officially maintained bindings (in repository):
 - Frameworks: Emscripten, Allegro5, Marmalade.
 
 Third-party bindings (see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/) page):
-- Languages: C, C# and: Beef, ChaiScript, D, Go, Haskell, Haxe/hxcpp, Java, JavaScript, Julia, Kotlin, Lua, Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
+- Languages: C, C# and: Beef, ChaiScript, Crystal, D, Go, Haskell, Haxe/hxcpp, Java, JavaScript, Julia, Kotlin, Lua, Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
 - Frameworks: AGS/Adventure Game Studio, Amethyst, bsf, Cinder, Cocos2d-x, Diligent Engine, Flexium, GML/Game Maker Studio2, Godot, GTK3+OpenGL3, Irrlicht Engine, LÖVE+LUA, Magnum, NanoRT, nCine, Nim Game Lib, Ogre, openFrameworks, OSG/OpenSceneGraph, Orx, Photoshop, px_render, Qt/QtDirect3D, SFML, Sokol, Unity, Unreal Engine 4, vtk, Win32 GDI, WxWidgets.
 - Note that C bindings ([cimgui](https://github.com/cimgui/cimgui)) are auto-generated, you can use its json/lua output to generate bindings for other languages.
 
@@ -149,7 +149,7 @@ See: [Frequently Asked Questions (FAQ)](https://github.com/ocornut/imgui/blob/ma
 
 See: [Wiki](https://github.com/ocornut/imgui/wiki) for many links, references, articles.
 
-See: [Articles about the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#Articles-about-the-IMGUI-paradigm) to read/learn about the Immediate Mode GUI paradigm.
+See: [Articles about the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#about-the-imgui-paradigm) to read/learn about the Immediate Mode GUI paradigm.
 
 If you are new to Dear ImGui and have issues with: compiling, linking, adding fonts, wiring inputs, running or displaying Dear ImGui: you can use [Discord server](http://discord.dearimgui.org).
 
