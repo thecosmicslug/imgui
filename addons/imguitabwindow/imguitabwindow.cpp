@@ -393,7 +393,7 @@ void RenderTextVertical(const ImFont* font,ImDrawList* draw_list, float size, Im
 
     // Align to be pixel perfect
     pos.x = (float)(int)pos.x;// + (rotateCCW ? (font->FontSize-font->DisplayOffset.y) : 0);  // Not sure it's correct
-    pos.y = (float)(int)pos.y + font->DisplayOffset.x;
+    pos.y = (float)(int)pos.y;// + font->DisplayOffset.x;  [+ImFontConfig::GlyphOffset.x?]
 
 
     float x = pos.x;

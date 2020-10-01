@@ -93,7 +93,7 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[GrabRounding]\n%1.3f\n", style.GrabRounding);
     fprintf(f, "[TabRounding]\n%1.3f\n", style.TabRounding);
     fprintf(f, "[TabBorderSize]\n%1.3f\n", style.TabBorderSize);
-    fprintf(f, "[TabMinWidthForUnselectedCloseButton]\n%1.3f",style.TabMinWidthForUnselectedCloseButton);
+    fprintf(f, "[TabMinWidthForCloseButton]\n%1.3f",style.TabMinWidthForCloseButton);
     fprintf(f, "[ColorButtonPosition]\n%d\n", style.ColorButtonPosition);
     fprintf(f, "[SelectableTextAlign]\n%1.3f %1.3f\n", style.SelectableTextAlign.x,style.SelectableTextAlign.y);
     fprintf(f, "[DisplayWindowPadding]\n%1.3f %1.3f\n", style.DisplayWindowPadding.x,style.DisplaySafeAreaPadding.y);
@@ -211,7 +211,8 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
                 else if (strcmp(name, "CircleSegmentMaxError")==0)               {npf=1;pf[0]=&style.CircleSegmentMaxError;}
                 else if (strcmp(name, "TabRounding")==0)         {npf=1;pf[0]=&style.TabRounding;}
                 else if (strcmp(name, "TabBorderSize")==0)         {npf=1;pf[0]=&style.TabBorderSize;}
-                else if (strcmp(name, "TabMinWidthForUnselectedCloseButton")==0)    {npf=1;pf[0]=&style.TabMinWidthForUnselectedCloseButton;}
+                else if (strcmp(name, "TabMinWidthForUnselectedCloseButton")==0 ||
+                         strcmp(name, "TabMinWidthForCloseButton")==0)    {npf=1;pf[0]=&style.TabMinWidthForCloseButton;}
                 else if (strcmp(name, "ColorButtonPosition")==0)   {npi=1;pi[0]=&style.ColorButtonPosition;}
                 else if (strcmp(name, "SelectableTextAlign")==0)   {npf=2;pf[0]=&style.SelectableTextAlign.x;pf[1]=&style.SelectableTextAlign.y;}
                 // all the colors here
@@ -373,7 +374,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 	    if (style.WindowTitleAlign.y<0 || style.WindowTitleAlign.y>1) style.WindowTitleAlign.y = 0.5f;
 	    //---------------------------------------------------------------------------------
             // Fix FLT_MAX restoring
-            if (style.TabMinWidthForUnselectedCloseButton>(FLT_MAX-0.002f)) style.TabMinWidthForUnselectedCloseButton=FLT_MAX;
+            if (style.TabMinWidthForCloseButton>(FLT_MAX-0.002f)) style.TabMinWidthForCloseButton=FLT_MAX;
             //---------------------------------------------------------------------------------
             name[0]='\0'; // mandatory
         }

@@ -188,8 +188,8 @@ static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* 
     }
 
     // Align to be pixel perfect
-    pos.x += font->DisplayOffset.x; // don't cast pos.x to int! It looks better whan scaled, but then we lose alignment with the caret position!
-    pos.y = (float)(int)pos.y + font->DisplayOffset.y;  // Not sure this is correct
+    //pos.x += font->DisplayOffset.x; //  [+ImFontConfig::GlyphOffset.x?] don't cast pos.x to int! It looks better whan scaled, but then we lose alignment with the caret position!
+    pos.y = (float)(int)pos.y;// + font->DisplayOffset.y;  //  [+ImFontConfig::GlyphOffset.y?] Not sure this is correct
     float& x = pos.x;
     float& y = pos.y;
 
@@ -312,8 +312,8 @@ static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* 
 
 
     // restore pos
-    pos.x -= font->DisplayOffset.x;
-    pos.y -= font->DisplayOffset.y;
+    //pos.x -= font->DisplayOffset.x;  //  [-ImFontConfig::GlyphOffset.x?]
+    //pos.y -= font->DisplayOffset.y;  //  [-ImFontConfig::GlyphOffset.x?]
 
 }
 static inline void ImDrawListAddTextLine(ImDrawList* draw_list,const ImFont* font, float font_size, ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, const ImVec4* cpu_fine_clip_rect = NULL)
