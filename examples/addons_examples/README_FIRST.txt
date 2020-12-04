@@ -330,11 +330,22 @@ EXTRA: COMPILING TO HTML USING EMSCRIPTEN:
 ===========================================
 Follow these steps:
 1) Using a terminal (=command line), make sure you have a working emcc setup (try: emcc -v).
-2) Navigate (cd) to this folder (the folder where README_FIRST.txt is located).
+2) Navigate (cd) to this folder (examples/addons_examples, the folder where README_FIRST.txt is located).
+
 3) To compile the first example try:
-em++ -O2 -o main.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  ../../imgui_demo.cpp main.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
+em++ -O2 -o main.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  ../../imgui_demo.cpp main.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
 4) To compile the second example try:
-em++ -O2 -o main2.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp main2.cpp --preload-file myNumbersTexture.png  --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
+em++ -O2 -o main2.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp main2.cpp --preload-file myNumbersTexture.png  --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
+
+Actually, the command-lines I use are slightly different, because: 
+a) I generate the files in the html subfolder. 
+b) I preload some configuration files that are kept only locally.
+c) I enable some extra addons and preload some data/configuration files for them.
+d) I enable the load_save emscripten shell (please see "Using predefined shells" below).
+Anyway, in case these help, the command-lines I use are:
+3)	em++ -O2 -o html/main.html --shell-file html/shell/load_save.html -D"EMSCRIPTEN_SAVE_SHELL" -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  ../../imgui_demo.cpp main.cpp --preload-file imgui.ini --preload-file blankImage.png --preload-file myNumbersTexture.png --preload-file Tile8x8.png --preload-file myNormalMapTestCase.png --preload-file nodeGraphEditor.nge.style --preload-file nodeGraphEditor.nge --preload-file tabLabelStyle.style --preload-file myTreeView.layout --preload-file tetsno.ogg --preload-file AKWF_c604_0024.wav -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"YES_IMGUIIMAGEEDITOR" -D"IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS" -D"YES_IMGUISOLOUD" -D"YES_IMGUISOLOUD_SPEECH" -D"YES_IMGUISOLOUD_SFXR" -D"YES_IMGUISDF" --preload-file "fonts/Sdf/DejaVuSerifCondensed-Bold.fnt" --preload-file "fonts/Sdf/DejaVuSerifCondensed-Bold.png" -D"YES_IMGUIBZ2" -D"YES_IMGUIMINIGAMES" -D"YES_IMGUISTRINGIFIER" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
+4)	em++ -O2 -o html/main2.html --shell-file html/shell/load_save.html -D"EMSCRIPTEN_SAVE_SHELL" -I"../../" ../../imgui.cpp ../../imgui_draw.cpp main2.cpp --preload-file blankImage.png --preload-file myNumbersTexture.png --preload-file Tile8x8.png --preload-file myNormalMapTestCase.png --preload-file "fonts/Icons/FontAwesome4/font.ttf" --preload-file myPanelManager.layout --preload-file myTabWindow.layout --preload-file mainBasic.cpp -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING" -D"IMGUI_USE_SDL2_BINDING" -D"YES_IMGUIIMAGEEDITOR" -D"IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS" -D"YES_IMGUIMINIGAMES"  -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
+
 
 Some notes:
 ->  The order of the .cpp files matters: main.cpp (or main2.cpp) must be the last in the command line.
@@ -369,23 +380,22 @@ P.S. In the C++ code you can check emscripten builds using the __EMSCRIPTEN__ de
 
 Using predefined shells:
 ------------------------
-In the examples/addons_examples/html folder, together with the .html (and .js) files that are necessary to run the emscripten version,
-some files with the .shell extensions are also present. 
-These files are NOT necessary when RUNNING the .html files, but can be used in the
-building process to make the .html files have a different look and functionality.
--> A shell file is a kind of 'template .html file' that can be used by emcc/em++ with the command-line option: --shell-file.
+In the examples/addons_examples/html/shell subfolder, some emscripten html "shell files" are present. 
+These files are NOT necessary when RUNNING the main .html files in the examples/addons_examples/html folder, 
+but can be used in the building process to add to the main .html files a different look and functionality.
+-> A "shell file" is a kind of 'template .html file' that can be used by emcc/em++ with the command-line option: --shell-file.
 Currently the available shells are:
-a) --shell-file html/emscripten_default.shell 	-> very similiar to the normal shell, except that it lacks a few options that didn't work as expected in my tests.
-b) --shell-file html/emscripten_load.shell		-> same as above, except that it lacks the emscripten logo and link and it exposes a "Browse" button that can be used
+a) --shell-file html/shell/default.html 	-> very similiar to the normal shell, except that it lacks a few options that didn't work as expected in my tests.
+b) --shell-file html/shell/load.html		-> same as above, except that it lacks the emscripten logo and link and it exposes a "Browse" button that can be used
 												   to "upload" files from the user local filesystem to the root folder of the emscripten/browser filesystem, that is the only one accessible from C/C++ code.
-												   (there is currently no notification to the C++ code that files have been added, so that we don't need any modification to our existing C++ code: however it's very easy to modify the shell code to achieve it). 
-c) --shell-file html/emscripten_load_save.shell	-> same as the 'load' shell, except that it allows the C++ code to 'download' files from the emscripten/browser filesystem to the user local filesystem,
+												   (there is currently no notification to the C++ code that files have been added, so that we don't need any modification to our existing C++ code: however it's very easy to modify the shell code and add this functionality). 
+c) --shell-file html/shell/load_save.html	-> same as the 'load' shell, except that it allows the C++ code to 'download' files from the emscripten/browser filesystem to the user local filesystem,
 												   through a Javascript method called "saveFileFromMemoryFSToDisk(memoryFSname,localFSname)" [Tip: 'localFSname' shouldn't contain folder paths: it's up to the browser to decide where to put it].
 												   This shell REQUIRES "FileSaver.js" to be present in the output (html/) folder at RUNTIME (when this shell [or shell d)] is not used "FileSaver.js" can be safely removed).
 												   (all this requires no modifications to existing C++ code, but of course it would be useless if "saveFileFromMemoryFSToDisk" is never called). 
 												   P.S. to call Javascript code from C++, we must include <emscripten.h> and then we can write something like: emscripten_run_script("saveFileFromMemoryFSToDisk('images/image.jpg','image.jpg')");
 												   P.S.2. There's more than this: we can call the Javascript methods exposed by "FileSaver.js" too, if we just need to create a file and download it without first saving it to the browser FS [Never tested].
-d) --shell-file html/emscripten_save.shell		-> c) - b). [This shell REQUIRES "FileSaver.js" to be present in the output (html/) folder at RUNTIME too].
+d) --shell-file html/shell/save.html		-> it's the difference: c) - b). [This shell REQUIRES "FileSaver.js" to be present in the output (html/) folder at RUNTIME too].
 
 WARNING: when using a shell b), c) or d) the command-line: --closure 1 should be avoided.
 TIP: Currently if you use the imguifilesystem addon together with shell c) or d), you can define EMSCRIPTEN_SAVE_SHELL globally,

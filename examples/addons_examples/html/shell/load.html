@@ -43,7 +43,7 @@
       @keyframes rotation {
         from {transform: rotate(0deg);}
         to {transform: rotate(360deg);}
-      }
+      }   
       #status {
         display: inline-block;
         vertical-align: top;
@@ -80,14 +80,15 @@
         color: white;
         font-family: 'Lucida Console', Monaco, monospace;
         outline: none;
-      }
+      }    
     </style>
   </head>
   <body>
 
     <div class="emscripten">
-      <input type="button" title="View the main canvas in fullscreen mode" value="Fullscreen" onclick="Module.requestFullScreen(false,false)">
-	</div>
+      <input type="button" title="View the main canvas in fullscreen mode" value="Fullscreen" onclick="Module.requestFullscreen(false,false)">
+	  <input type="file" title="Add local files to the browsable file system" multiple id="fileSelection_id" onchange="fileSelectionCallback();"/>	
+    </div>
 
 
     <figure style="overflow:visible;" id="spinner"><div class="spinner"></div><center style="margin-top:0.5em"><strong>emscripten</strong></center></figure>
@@ -180,22 +181,38 @@
         };
       };
     </script>
-
-
-<script src="FileSaver.js"> </script>
 <script>
-  function saveFileFromMemoryFSToDisk(memoryFSname,localFSname) 	// This can be called by C++ code
-  {
-     var data=FS.readFile(memoryFSname);
-     var blob;
-     var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-     if(isSafari) {
-        blob = new Blob([data.buffer], {type: "application/octet-stream"});
-     } else {
-        blob = new Blob([data.buffer], {type: "application/octet-binary"});
-     }
-     saveAs(blob, localFSname);
-  }
+      function fileExistsInMemoryFS(path) {
+        var statbuf = FS.stat(path);
+        if (!statbuf) return false;
+		return FS.isFile(statbuf.mode);
+      }
+      function saveFileToMemoryFS(e) {
+       try {
+           if (fileExistsInMemoryFS('/'+e.target.current_file_name)) FS.unlink('/'+e.target.current_file_name);          
+       }
+	   catch(err) {
+	    //document.getElementById("saveFileToMemoryFS").innerHTML = err.message;
+		}
+          var data=e.target.result;
+          FS.createDataFile(
+             '/', 	// the root folder can be changed here
+			e.target.current_file_name, data, true, true, true
+          );
+          //Module.ccall('file_system_changed_callback');	// This function should be exposed by the C++ code
+      }
+
+      function fileSelectionCallback() {
+          var files = document.getElementById("fileSelection_id").files,
+          nFiles = files.length;
+          for (var nFileId = 0; nFileId < nFiles; nFileId++) {
+              var file=files[nFileId];
+              var reader = new FileReader();
+              reader.current_file_name = file.name;                            
+              reader.onload = saveFileToMemoryFS;
+              reader.readAsBinaryString(file);
+          }
+       }
 </script>
 
 

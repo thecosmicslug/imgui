@@ -145,9 +145,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->IDStack.push_back(window->ID);
 
     // Add to stack
+    // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
     g.CurrentWindowStack.push_back(window);
-    SetCurrentWindow(window);
-    ErrorCheckBeginEndCompareStacksSize(window, true);
+    g.CurrentWindow = window;
+    window->DC.StackSizesOnBegin.SetToCurrentState();
+    g.CurrentWindow = NULL;
+
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupData& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
@@ -264,6 +267,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             }
         }
 
+        // SELECT VIEWPORT
+        // FIXME-VIEWPORT: In the docking/viewport branch, this is the point where we select the current viewport (which may affect the style)
         SetCurrentWindow(window);
 
         // LOCK BORDER SIZE AND PADDING FOR THE FRAME (so that altering them doesn't cause inconsistencies)
@@ -750,17 +755,16 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
-        window->DC.ItemFlagsStack.resize(0);
+        //window->DC.ItemFlagsStack.resize(0);
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
         window->DC.CurrentColumns = NULL;
         window->DC.TreeDepth = 0;
         window->DC.TreeJumpToParentOnPopMask = 0x00;
         window->DC.StateStorage = &window->StateStorage;
-        window->DC.GroupStack.resize(0);
-        window->DC.ItemFlags = parent_window ? parent_window->DC.ItemFlags : ImGuiItemFlags_Default_;
-        if (parent_window)
-            window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
+        //window->DC.GroupStack.resize(0);
+        //window->DC.ItemFlags = parent_window ? parent_window->DC.ItemFlags : ImGuiItemFlags_Default_;
+        //if (parent_window)  window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
 
         window->DC.MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
 
@@ -783,7 +787,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
             window->DC.ItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
             window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
-            window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Menu);
+            window->DC.NavLayerActiveMask = (1 << ImGuiNavLayer_Menu);
 
             if (p_opened != NULL)   {
                 //*p_opened = CloseWindowButton(p_opened);
@@ -816,7 +820,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             // Restore layer
             window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
-            window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
+            window->DC.NavLayerActiveMask = (1 << ImGuiNavLayer_Main);
             window->DC.ItemFlags = item_flags_backup;
 
             // Title bar text (FIXME: refactor text alignment facilities along with RenderText helpers)
@@ -967,7 +971,7 @@ static void DockWindowEnd()
     g.CurrentWindowStack.pop_back();
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
-    ErrorCheckBeginEndCompareStacksSize(window, false);
+    window->DC.StackSizesOnBegin.CompareWithCurrentState();
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
 }
 

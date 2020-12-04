@@ -86,7 +86,7 @@
   <body>
 
     <div class="emscripten">
-      <input type="button" title="View the main canvas in fullscreen mode" value="Fullscreen" onclick="Module.requestFullScreen(false,false)">
+      <input type="button" title="View the main canvas in fullscreen mode" value="Fullscreen" onclick="Module.requestFullscreen(false,false)">
 	  <input type="file" title="Add local files to the browsable file system" multiple id="fileSelection_id" onchange="fileSelectionCallback();"/>	
     </div>
 
@@ -196,7 +196,7 @@
 		}
           var data=e.target.result;
           FS.createDataFile(
-             '/', 	// the root folder can be changed here
+             '/', 	// thr root folder can be changed here
 			e.target.current_file_name, data, true, true, true
           );
           //Module.ccall('file_system_changed_callback');	// This function should be exposed by the C++ code
@@ -213,6 +213,23 @@
               reader.readAsBinaryString(file);
           }
        }
+</script>
+
+
+<script src="FileSaver.js"> </script>
+<script>
+  function saveFileFromMemoryFSToDisk(memoryFSname,localFSname) 	// This can be called by C++ code
+  {
+     var data=FS.readFile(memoryFSname);
+     var blob;
+     var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+     if(isSafari) {
+        blob = new Blob([data.buffer], {type: "application/octet-stream"});
+     } else {
+        blob = new Blob([data.buffer], {type: "application/octet-binary"});
+     }
+     saveAs(blob, localFSname);
+  }
 </script>
 
 

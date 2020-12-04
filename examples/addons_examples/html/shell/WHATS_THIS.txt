@@ -1,0 +1,6 @@
+These are some emscripten "shell files".
+
+These files are used at build time, and are not necessary at runtime.
+
+For further info see ../../README_FIRST.txt
+
