@@ -89,7 +89,7 @@ struct ImImpl_PrivateParams  {
         attrLocPosition(-1),attrLocUV(-1),attrLocColour(-1),fontTex(0)
     {resetSdfParams();for (int i=0;i<IMIMPL_NUM_ROUND_ROBIN_VERTEX_BUFFERS;i++) {vertexBuffers[i]=0;indexBuffers[i]=0;}}
     void resetSdfParams() {
-        sdfParams = ImVec4(0.5f,0.4f,0.2f,0.04f);
+        sdfParams = ImVec4(0.491f,0.495f,0.250f,0.04f);//ImVec4(0.5f,0.4f,0.2f,0.04f);
 #       ifndef IMIMPL_USE_SDF_OUTLINE_SHADER
         sdfParams.x=0.5f;
 #       endif //IMIMPL_USE_SDF_OUTLINE_SHADER
@@ -2008,21 +2008,21 @@ bool changed = false;
 #if (defined(IMGUI_USE_AUTO_BINDING_OPENGL) && !defined(IMIMPL_SHADER_NONE))
 #ifdef IMIMPL_USE_SDF_SHADER
 const float maxValue = 0.75f;
-const float step = 0.005f;
+const float step = 0.001f;
 #ifdef IMIMPL_USE_SDF_OUTLINE_SHADER
 PushItemWidth(GetWindowWidth()*0.15f);
-changed|=DragFloat("###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,gImImplPrivateParams.sdfParams.y,maxValue);
+changed|=DragFloat("###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,(gImImplPrivateParams.sdfParams.y-0.1f)>0.f?(gImImplPrivateParams.sdfParams.y-0.1f):0.f,maxValue,"%.4f");
 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
 ImGui::SameLine();
-changed|=DragFloat("###ImImpl_EditSdfParams_Y",&gImImplPrivateParams.sdfParams.y,step,0.f,gImImplPrivateParams.sdfParams.x);
+changed|=DragFloat("###ImImpl_EditSdfParams_Y",&gImImplPrivateParams.sdfParams.y,step,0.f,(gImImplPrivateParams.sdfParams.x+0.1f)>maxValue?maxValue:(gImImplPrivateParams.sdfParams.x+0.1f),"%.4f");
 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Extension");
 ImGui::SameLine();
-changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_Z",&gImImplPrivateParams.sdfParams.z,step,0.f,maxValue);
+changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_Z",&gImImplPrivateParams.sdfParams.z,0.05f,0.f,maxValue,"%.2f");
 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Outline Darkness");
 PopItemWidth();
 #else //IMIMPL_USE_SDF_OUTLINE_SHADER
 PushItemWidth(GetWindowWidth()*0.5f);
-changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,0.f,maxValue);
+changed|=DragFloat("Global Font Params###ImImpl_EditSdfParams_X",&gImImplPrivateParams.sdfParams.x,step,0.f,maxValue,"%.4f");
 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Glyph Extension");
 PopItemWidth();
 #endif //IMIMPL_USE_SDF_OUTLINE_SHADER

@@ -7,7 +7,7 @@
 /*static*/ SDL_Window* window = NULL;
 static ImVec2 mousePosScale(1.0f, 1.0f);
 
-static const SDL_SystemCursor sdlCursorIds[ImGuiMouseCursor_COUNT+1] = {
+static const SDL_SystemCursor sdlCursorIds[] = {
     SDL_SYSTEM_CURSOR_ARROW,
     SDL_SYSTEM_CURSOR_IBEAM,
     SDL_SYSTEM_CURSOR_HAND,//SDL_SYSTEM_CURSOR_SIZEALL,      //SDL_SYSTEM_CURSOR_HAND,    // or SDL_SYSTEM_CURSOR_SIZEALL  //ImGuiMouseCursor_ResizeAll,                  // Unused by ImGui
@@ -16,7 +16,8 @@ static const SDL_SystemCursor sdlCursorIds[ImGuiMouseCursor_COUNT+1] = {
     SDL_SYSTEM_CURSOR_SIZENESW,     //ImGuiMouseCursor_ResizeNESW,
     SDL_SYSTEM_CURSOR_SIZENWSE,     //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
     SDL_SYSTEM_CURSOR_HAND,
-    SDL_SYSTEM_CURSOR_ARROW         //,ImGuiMouseCursor_Arrow
+    SDL_SYSTEM_CURSOR_NO,
+    SDL_SYSTEM_CURSOR_ARROW         // we use this as fallback ImGuiMouseCursor_Arrow
 };
 static SDL_Cursor* sdlCursors[ImGuiMouseCursor_COUNT+1];
 
@@ -442,6 +443,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
 {
     if (!InitBinding(pOptionalInitParams,argc,argv)) return -1;
     // New: create cursors-------------------------------------------
+    IM_ASSERT(sizeof(sdlCursorIds)/sizeof(sdlCursorIds[0])==ImGuiMouseCursor_COUNT+1);
     for (int i=0,isz=ImGuiMouseCursor_COUNT+1;i<isz;i++) {
         sdlCursors[i] = SDL_CreateSystemCursor(sdlCursorIds[i]);
     }

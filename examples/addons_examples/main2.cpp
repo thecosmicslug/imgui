@@ -241,6 +241,10 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                 }
             }
             ImGui::Spacing();
+#           ifdef IMIMPL_BUILD_SDF
+            ImImpl_EditSdfParams();
+            ImGui::Spacing();
+#           endif
 
             ImGui::PushItemWidth(275);
             ImGui::ColorEdit3("glClearColor",&gClearColor.x);

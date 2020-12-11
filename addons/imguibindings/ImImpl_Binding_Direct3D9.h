@@ -16,7 +16,7 @@ static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
 static LPDIRECT3DINDEXBUFFER9   g_pIB = NULL;
 
 
-static const LPCTSTR win32CursorIds[ImGuiMouseCursor_COUNT+1] = {
+static const LPCTSTR win32CursorIds[] = {
     IDC_ARROW,
     IDC_IBEAM,
     IDC_SIZEALL,      //SDL_SYSTEM_CURSOR_HAND,    // or SDL_SYSTEM_CURSOR_SIZEALL  //ImGuiMouseCursor_ResizeAll,                  // Unused by ImGui
@@ -29,7 +29,8 @@ static const LPCTSTR win32CursorIds[ImGuiMouseCursor_COUNT+1] = {
 #   else
     IDC_ARROW,         //ImGuiMouseCursor_Hand // Unused by ImGui
 #   endif
-    IDC_ARROW         //,ImGuiMouseCursor_Arrow
+    IDC_ARROW,        //ImGuiMouseCursor_NotAllowed
+    IDC_ARROW         //ImGuiMouseCursor_Arrow (we use this as fallback)
 };
 static HCURSOR win32Cursors[ImGuiMouseCursor_COUNT+1];
 
@@ -324,6 +325,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     //----------------------------------------------------------------------------------
 
     // New: create cursors-------------------------------------------
+    IM_ASSERT(sizeof(win32CursorIds)/sizeof(win32CursorIds[0])==ImGuiMouseCursor_COUNT+1);
     for (int i=0,isz=ImGuiMouseCursor_COUNT+1;i<isz;i++) {
         win32Cursors[i] = LoadCursor(NULL,(LPCTSTR) win32CursorIds[i]);
         if (i==0) SetCursor(win32Cursors[i]);

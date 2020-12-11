@@ -222,6 +222,7 @@ static void GlutDrawGL()    {
             if (oldCursor!=ImGui::GetMouseCursor()) {
                 oldCursor=ImGui::GetMouseCursor();
                 static const int glutCursors[] = {
+                    //GLUT_CURSOR_NONE = -1,
                     GLUT_CURSOR_INHERIT,
                     GLUT_CURSOR_TEXT,
                     GLUT_CURSOR_CROSSHAIR,      //ImGuiMouseCursor_ResizeAll,                  // Unused by ImGui
@@ -230,16 +231,19 @@ static void GlutDrawGL()    {
                     GLUT_CURSOR_TOP_RIGHT_CORNER,//ImGuiMouseCursor_ResizeNESW,
                     GLUT_CURSOR_BOTTOM_RIGHT_CORNER, //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
                     GLUT_CURSOR_INFO,        // ImGuiMouseCursor_Hand
-                    GLUT_CURSOR_INHERIT        //,ImGuiMouseCursor_Arrow
+                    GLUT_CURSOR_DESTROY,
+                    GLUT_CURSOR_INHERIT,
                 };
-                IM_ASSERT(sizeof(glutCursors)/sizeof(glutCursors[0])==ImGuiMouseCursor_COUNT+1);
+                IM_ASSERT(sizeof(glutCursors)/sizeof(glutCursors[0])==ImGuiMouseCursor_COUNT+1);    // asserts
                 glutSetCursor(glutCursors[oldCursor]);
             }
         }
 
         if (io.WantSetMousePos)  {
             // Set mouse position if requested by io.WantSetMousePos flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
-            glutWarpPointer((int)io.MousePos.x, (int)io.MousePos.y);;
+#           ifndef __EMSCRIPTEN__     // error: undefined symbol: glutWarpPointer (referenced by top-level compiled C/C++ code)
+            glutWarpPointer((int)io.MousePos.x, (int)io.MousePos.y);
+#           endif
         }
         /*else    {
             // Get mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)

@@ -9,7 +9,7 @@ DESTDIR = ./
 # START USER EDITABLE AREA -----------------------------------------------------------------------
 
 # When commented out, main.cpp is built, otherwise main2.cpp is built
-#CONFIG+= use_main2
+CONFIG+= use_main2
 #CONFIG+= use_main3  # dev only
 #CONFIG+= use_main4  # dev only
 #CONFIG+= use_main5  # dev only
@@ -109,7 +109,8 @@ HEADERS+=  $$IMGUI_BASE_PATH"/imgui.h"						    \
 	   $$IMGUI_BASE_PATH"/addons/imguiyesaddons/imgui*.h"
 
 SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
-           $$IMGUI_BASE_PATH"/imgui_draw.cpp" #\
+           $$IMGUI_BASE_PATH"/imgui_draw.cpp" \
+           $$IMGUI_BASE_PATH"/imgui_tables.cpp" #\
            #$$IMGUI_BASE_PATH"/imgui_widgets.cpp"
 
 OTHER_FILES+= $$IMGUI_BASE_PATH"/imgui_widgets.cpp" \ # This (new) file is automatically included in imgui_user.inl. Please don't compile it.
@@ -143,11 +144,14 @@ DEFINES+=NO_IMGUISTYLESERIALIZER NO_IMGUIDATECHOOSER NO_IMGUILISTVIEW NO_IMGUIGR
 use_main2 {
 SOURCES+=main2.cpp
 TARGET = imgui_addons_example2
+#DEFINES+= IMIMPL_BUILD_SDF IMIMPL_USE_SDF_OUTLINE_SHADER # to be commented out
 } #use_main2
 !use_main2 {
 SOURCES+=main.cpp
 SOURCES+=$$IMGUI_BASE_PATH"/imgui_demo.cpp" # for ImGui::ShowTestWindow()
 TARGET = imgui_addons_example1
+#DEFINES+= USE_ADVANCED_SETUP IMIMPL_BUILD_SDF IMIMPL_USE_SDF_OUTLINE_SHADER # to be commented out
+
 } #!use_main2
 } #!use_main3
 } #!use_main4

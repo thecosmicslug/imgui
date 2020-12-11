@@ -8,13 +8,14 @@
 #define GLFW_HAS_MOUSE_CURSOR_SUPPORT
 #endif //GLFW_VERSION
 
+
 #if (defined(GLFW_HAS_MOUSE_CURSOR_SUPPORT) && defined(IMGUI_GLFW_NO_NATIVE_CURSORS))
 #undef IMGUI_GLFW_NO_NATIVE_CURSORS
 #warning IMGUI_GLFW_NO_NATIVE_CURSORS must be undefined globally, because your GLFW version is >= 3.1 and has embedded mouse cursor support.
 #endif //IMGUI_GLFW_NO_NATIVE_CURSORS
 
 #ifdef GLFW_HAS_MOUSE_CURSOR_SUPPORT
-    static const int glfwCursorIds[ImGuiMouseCursor_COUNT+1] = {
+    static const int glfwCursorIds[] = {
         GLFW_ARROW_CURSOR,
         GLFW_IBEAM_CURSOR,
         GLFW_HAND_CURSOR,      //SDL_SYSTEM_CURSOR_HAND,    // or SDL_SYSTEM_CURSOR_SIZEALL  //ImGuiMouseCursor_ResizeAll,                  // Unused by ImGui
@@ -23,7 +24,8 @@
         GLFW_CROSSHAIR_CURSOR,     //ImGuiMouseCursor_ResizeNESW,
         GLFW_CROSSHAIR_CURSOR,       //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
         GLFW_HAND_CURSOR,       //ImGuiMouseCursor_Hand,          // Unused by ImGui
-        GLFW_ARROW_CURSOR         //,ImGuiMouseCursor_Arrow
+        GLFW_ARROW_CURSOR,         //,ImGuiMouseCursor_Arrow
+        GLFW_ARROW_CURSOR
     };
     static GLFWcursor* glfwCursors[ImGuiMouseCursor_COUNT+1];
 
@@ -32,7 +34,7 @@
 #   ifdef _WIN32
 #       define IMGUI_USE_WIN32_CURSORS     // Optional, but needs at window creation: wc.hCursor = LoadCursor( NULL, NULL); // Now the window class is inside glfw3... Not sure how I can access it...
 #       ifdef IMGUI_USE_WIN32_CURSORS
-    static const LPCTSTR win32CursorIds[ImGuiMouseCursor_COUNT+1] = {
+    static const LPCTSTR win32CursorIds[] = {
         IDC_ARROW,
         IDC_IBEAM,
         IDC_SIZEALL,      //SDL_SYSTEM_CURSOR_HAND,    // or SDL_SYSTEM_CURSOR_SIZEALL  //ImGuiMouseCursor_Move,                  // Unused by ImGui
@@ -45,7 +47,8 @@
 #       else
         IDC_ARROW,         //ImGuiMouseCursor_Hand // Unused by ImGui
 #       endif
-        IDC_ARROW         //,ImGuiMouseCursor_Arrow
+        IDC_ARROW,         //,ImGuiMouseCursor_Arrow
+        IDC_ARROW
     };
     static HCURSOR win32Cursors[ImGuiMouseCursor_COUNT+1];
 #       endif //IMGUI_USE_WIN32_CURSORS
@@ -59,7 +62,7 @@
 #           include <GLFW/glfw3native.h>        // GLFWAPI Display* glfwGetX11Display(void); //GLFWAPI Window glfwGetX11Window(GLFWwindow* window);
 #           include <X11/cursorfont.h>
     // 52 (closed hand)   58 (hand with forefinger) 124 (spray)   86  (pencil)  150 (wait)
-    static const unsigned int x11CursorIds[ImGuiMouseCursor_COUNT+1] = {
+    static const unsigned int x11CursorIds[] = {
         2,//SDL_SYSTEM_CURSOR_ARROW,
         152,//SDL_SYSTEM_CURSOR_IBEAM,
         30,//SDL_SYSTEM_CURSOR_SIZEALL,      //SDL_SYSTEM_CURSOR_HAND,    // or SDL_SYSTEM_CURSOR_SIZEALL  //ImGuiMouseCursor_Move,                  // Unused by ImGui
@@ -68,7 +71,8 @@
         13,//SDL_SYSTEM_CURSOR_SIZENESW,     //ImGuiMouseCursor_ResizeNESW,
         15,//SDL_SYSTEM_CURSOR_SIZENWSE,     //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
         58,                                 //ImGuiMouseCursor_Hand
-        2//SDL_SYSTEM_CURSOR_ARROW         //,ImGuiMouseCursor_Arrow
+        2,//SDL_SYSTEM_CURSOR_ARROW         //,ImGuiMouseCursor_Arrow
+        2//SDL_SYSTEM_CURSOR_ARROW
     };
     static Cursor x11Cursors[ImGuiMouseCursor_COUNT+1];
 #       endif //IMGUI_USE_X11_CURSORS
@@ -694,18 +698,27 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
 ImImplMainLoopFrameStruct mainLoopFrameStruct;
     // New: create cursors-------------------------------------------
 #ifdef GLFW_HAS_MOUSE_CURSOR_SUPPORT
+        IM_ASSERT(sizeof(glfwCursorIds)/sizeof(glfwCursorIds[0])==ImGuiMouseCursor_COUNT+1);
+        int num_failures = 0;
         for (int i=0,isz=ImGuiMouseCursor_COUNT+1;i<isz;i++) {
             glfwCursors[i] = glfwCreateStandardCursor(glfwCursorIds[i]);
+            if (glfwCursors[i]==NULL) {/*printf("Sorry, but your glfw version does not have standard cursor support for index: %d\n",i);fflush(stdout);*/++num_failures;}
             if (i==0) glfwSetCursor(window,glfwCursors[i]);
         }
-#else //GLFW_HAS_MOUSE_CURSOR_SUPPORT
+        if (num_failures==ImGuiMouseCursor_COUNT+1) {
+            printf("Sorry, but your glfw version has a broken standard cursor support [glfwCreateStandardCursor(...) always returns NULL].\nSkipping cursors.\n");
+            fflush(stdout);
+        }
+#else //GLFW_HAS_MOUSE_CURSOR_SUPPORT        
 #   ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
 #       ifdef IMGUI_USE_WIN32_CURSORS
+        IM_ASSERT(sizeof(win32CursorIds)/sizeof(win32CursorIds[0])==ImGuiMouseCursor_COUNT+1);
         for (int i=0,isz=ImGuiMouseCursor_COUNT+1;i<isz;i++) {
             win32Cursors[i] = LoadCursor(NULL,(LPCTSTR) win32CursorIds[i]);
             if (i==0) SetCursor(win32Cursors[i]);
         }
 #       elif defined IMGUI_USE_X11_CURSORS
+        IM_ASSERT(sizeof(x11CursorIds)/sizeof(x11CursorIds[0])==ImGuiMouseCursor_COUNT+1);
         mainLoopFrameStruct.x11Display = glfwGetX11Display();
         mainLoopFrameStruct.x11Window = glfwGetX11Window(window);
         //XColor white;white.red=white.green=white.blue=255;

@@ -16,7 +16,8 @@ If you want to compile the examples to .html yourself, or you can't run the exam
 
 UPDATE: There's a third demo named main3.cpp, but it's currently used to develop imguicodeeditor (see below).
 
-NOTE: Even if recent versions of imgui include the file imgui_widgets.cpp, to compile the examples this file must be left out (the old compilation scripts/projects should still work)!
+NOTE: Even if recent versions of Dear Imgui include the file imgui_widgets.cpp, to compile the examples this file must be left out (the old compilation scripts/projects should still work)!
+NOTE2: More recent versions of Dear ImGui include the file imgui_tables.cpp. This must be added to your cpp files.
 
 -----------------------------
 NOTE FOR VISUAL STUDIO USERS:
@@ -29,15 +30,15 @@ and report the results here: https://github.com/Flix01/imgui/issues
 
 [The current directory must be: imgui/examples/addons_examples]
 # With GLUT + GLEW static: [GLEW is necessary for all Windows bindings except Direct3D9: here we use the static version to save one .dll]
-cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLUT_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe glut32.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLUT_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe glut32.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With GLEW static only:
-cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /link /out:imgui_addons_example1.exe glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /link /out:imgui_addons_example1.exe glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With bundled GL3W only (and using shaders from GL3: /D"IMIMPL_SHADER_GL3"):	-> This should work with no dependencies <-
-cl /O2 /MT /I"../../" /I"../libs/gl3w/" ../libs/gl3w/GL/gl3w.c ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GL3W" /D"IMIMPL_SHADER_GL3" /link /out:imgui_addons_example1.exe opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /O2 /MT /I"../../" /I"../libs/gl3w/" ../libs/gl3w/GL/gl3w.c ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GL3W" /D"IMIMPL_SHADER_GL3" /link /out:imgui_addons_example1.exe opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With DIRECT3D9:	-> This should work with no dependencies <-
-cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
 # With GLFW3 + GLEW static:
-cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLFW_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe glfw3.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
+cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLFW_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe glfw3.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # TODO: Add the last command-line for SDL2
 
 P.S. currently GLEW is required to compile all the Windows bindings except Direct3D9.
@@ -47,13 +48,14 @@ so that we have another Windows binding that should work without additional libr
 P.S.2: The order of the .cpp files is important! main.cpp must be the last of all the source files in the command line.
 
 NOTE: Even if recent versions of imgui include the file imgui_widgets.cpp, to compile the examples this file must be left out.
+NOTE2: More recent versions of Dear ImGui include the file imgui_tables.cpp. This must be added to your cpp files to compile the examples.
 
 ====================================
 WHAT IS "IMGUI ADDONS" ?
 ====================================
 It's a collection of "extra imgui widgets" together with an automatic way of "binding" ImGui to a specific openGL library (glfw, SDL2, glut and WinAPI), or to the Direct3D9 library, so that a single cpp "main" file can be used for all of them.
 
-"ImGui Addons" does NOT modify the ImGui library itself in any way (i.e. imgui.cpp, imgui_draw.cpp and imgui_demo.cpp are untouched); it just adds:
+"ImGui Addons" does NOT modify the ImGui library itself in any way (i.e. imgui.cpp, imgui_draw.cpp, imgui_tables.cpp, imgui_widgets.cpp and imgui_demo.cpp are untouched); it just adds:
 -> the "addons" subfolder.
 -> the two files "imgui_user.h" and "imgui_user.inl" (in the base ImGui folder).
 
@@ -278,7 +280,7 @@ because they use some methods that are static inside imgui.cpp, and not exposed 
 P.S. imguibindings is NOT considered an addon that you can easily extract and use inside your code!
 
 IMPORTANT: Of course if you don't use the file imgui_user.inl (that includes addons/imgui_user.inl), then you
-need to compile imgui_widgets.cpp too (together with imgui.cpp and imgui_draw.cpp).
+need to compile imgui_widgets.cpp too (together with imgui.cpp, imgui_draw.cpp and imgui_tables.cpp).
 P.S. As I've already written before, addons/imgui_user.inl now includes imgui_widgets.cpp.
 
 TESTED stand-alone addons include: imguifilesystem, imguistyleserializer, imguinodegrapheditor, imguicodeeditor, imguiimageeditor (but many others should work).
@@ -317,7 +319,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
 
 
 On Ubuntu, I can compile it with the following command line (provided that imgui.h is two folders up, and that I want to use glfw):
-gcc  -o basicExample -I"../../" ../../imgui.cpp ../../imgui_draw.cpp mainBasic.cpp -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -I"/usr/include/GLFW" -D"IMGUI_USE_GLFW_BINDING" -L"/usr/lib/x86_64-linux-gnu" -lglfw -lX11 -lm -lGL -lstdc++ -s
+gcc  -o basicExample -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp mainBasic.cpp -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_INCLUDE_IMGUI_USER_INL" -I"/usr/include/GLFW" -D"IMGUI_USE_GLFW_BINDING" -L"/usr/lib/x86_64-linux-gnu" -lglfw -lX11 -lm -lGL -lstdc++ -s
 
 
 P.S. Please note that you CAN still use OpenGL/Direct3D functions/commands from within mainBasic.cpp, 
@@ -333,9 +335,9 @@ Follow these steps:
 2) Navigate (cd) to this folder (examples/addons_examples, the folder where README_FIRST.txt is located).
 
 3) To compile the first example try:
-em++ -O2 -o main.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  ../../imgui_demo.cpp main.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
+em++ -O2 -o main.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
 4) To compile the second example try:
-em++ -O2 -o main2.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp main2.cpp --preload-file myNumbersTexture.png  --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
+em++ -O2 -o main2.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp main2.cpp --preload-file myNumbersTexture.png  --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
 
 Actually, the command-lines I use are slightly different, because: 
 a) I generate the files in the html subfolder. 
@@ -343,8 +345,8 @@ b) I preload some configuration files that are kept only locally.
 c) I enable some extra addons and preload some data/configuration files for them.
 d) I enable the load_save emscripten shell (please see "Using predefined shells" below).
 Anyway, in case these help, the command-lines I use are:
-3)	em++ -O2 -o html/main.html --shell-file html/shell/load_save.html -D"EMSCRIPTEN_SAVE_SHELL" -I"../../" ../../imgui.cpp ../../imgui_draw.cpp  ../../imgui_demo.cpp main.cpp --preload-file imgui.ini --preload-file blankImage.png --preload-file myNumbersTexture.png --preload-file Tile8x8.png --preload-file myNormalMapTestCase.png --preload-file nodeGraphEditor.nge.style --preload-file nodeGraphEditor.nge --preload-file tabLabelStyle.style --preload-file myTreeView.layout --preload-file tetsno.ogg --preload-file AKWF_c604_0024.wav -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"YES_IMGUIIMAGEEDITOR" -D"IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS" -D"YES_IMGUISOLOUD" -D"YES_IMGUISOLOUD_SPEECH" -D"YES_IMGUISOLOUD_SFXR" -D"YES_IMGUISDF" --preload-file "fonts/Sdf/DejaVuSerifCondensed-Bold.fnt" --preload-file "fonts/Sdf/DejaVuSerifCondensed-Bold.png" -D"YES_IMGUIBZ2" -D"YES_IMGUIMINIGAMES" -D"YES_IMGUISTRINGIFIER" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
-4)	em++ -O2 -o html/main2.html --shell-file html/shell/load_save.html -D"EMSCRIPTEN_SAVE_SHELL" -I"../../" ../../imgui.cpp ../../imgui_draw.cpp main2.cpp --preload-file blankImage.png --preload-file myNumbersTexture.png --preload-file Tile8x8.png --preload-file myNormalMapTestCase.png --preload-file "fonts/Icons/FontAwesome4/font.ttf" --preload-file myPanelManager.layout --preload-file myTabWindow.layout --preload-file mainBasic.cpp -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING" -D"IMGUI_USE_SDL2_BINDING" -D"YES_IMGUIIMAGEEDITOR" -D"IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS" -D"YES_IMGUIMINIGAMES"  -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
+3)	em++ -O2 -o html/main.html --shell-file html/shell/load_save.html -D"EMSCRIPTEN_SAVE_SHELL" -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp  ../../imgui_demo.cpp main.cpp --preload-file imgui.ini --preload-file blankImage.png --preload-file myNumbersTexture.png --preload-file Tile8x8.png --preload-file myNormalMapTestCase.png --preload-file nodeGraphEditor.nge.style --preload-file nodeGraphEditor.nge --preload-file tabLabelStyle.style --preload-file myTreeView.layout --preload-file tetsno.ogg --preload-file AKWF_c604_0024.wav -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"YES_IMGUIIMAGEEDITOR" -D"IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS" -D"YES_IMGUISOLOUD" -D"YES_IMGUISOLOUD_SPEECH" -D"YES_IMGUISOLOUD_SFXR" -D"YES_IMGUISDF" --preload-file "fonts/Sdf/DejaVuSerifCondensed-Bold.fnt" --preload-file "fonts/Sdf/DejaVuSerifCondensed-Bold.png" -D"YES_IMGUIBZ2" -D"YES_IMGUIMINIGAMES" -D"YES_IMGUISTRINGIFIER" -D"IMGUI_USE_SDL2_BINDING" -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
+4)	em++ -O2 -o html/main2.html --shell-file html/shell/load_save.html -D"EMSCRIPTEN_SAVE_SHELL" -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp main2.cpp --preload-file blankImage.png --preload-file myNumbersTexture.png --preload-file Tile8x8.png --preload-file myNormalMapTestCase.png --preload-file "fonts/Icons/FontAwesome4/font.ttf" --preload-file myPanelManager.layout --preload-file myTabWindow.layout --preload-file mainBasic.cpp -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMIMPL_USE_FONT_TEXTURE_LINEAR_FILTERING" -D"IMGUI_USE_SDL2_BINDING" -D"YES_IMGUIIMAGEEDITOR" -D"IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS" -D"YES_IMGUIMINIGAMES"  -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1
 
 
 Some notes:
@@ -364,9 +366,9 @@ Some notes:
    It can lead to problems: you can experience errors that Firefox "Tools->Web Developer" tells you that are related to IFSDB (or something like that).
 
 (*): To compile the first demo using the GLUT binding, please try:
-em++ -O2 -o main.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_GLUT_BINDING" -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
+em++ -O2 -o main.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_GLUT_BINDING" -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
 	To compile it using GLFW3 try: 
-em++ -O2 -o main.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_demo.cpp main.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png  -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_GLFW_BINDING" -D"IMGUI_GLFW_NO_NATIVE_CURSORS" -s USE_GLFW=3 -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
+em++ -O2 -o main.html -I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp --preload-file myNumbersTexture.png --preload-file Tile8x8.png  -D"IMGUI_INCLUDE_IMGUI_USER_H" -D"IMGUI_USE_GLFW_BINDING" -D"IMGUI_GLFW_NO_NATIVE_CURSORS" -s USE_GLFW=3 -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
 	Thus native cursors have been disabled with: -D"IMGUI_GLFW_NO_NATIVE_CURSORS" (in InitGL() we can use: ImGui::GetIO().MouseDrawCursor = true; to use ImGui cursors instead).
 	UPDATE: Mouse cursor support has been added to GLFW version 3.1. 
 	-D"IMGUI_GLFW_NO_NATIVE_CURSORS" is DEPRECATED for GLFW versions >= 3.1.

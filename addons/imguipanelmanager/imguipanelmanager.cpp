@@ -222,6 +222,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->LastFrameActive = current_frame;
         window->LastTimeActive = (float) g.Time;
         window->IDStack.resize(1);
+        window->DrawList->_ResetForNewFrame();
+        window->DC.CurrentTableIdx = -1;
+
 
         // Restore buffer capacity when woken from a compacted state, to avoid
         if (window->MemoryCompacted)
