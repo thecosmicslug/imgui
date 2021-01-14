@@ -1528,6 +1528,7 @@ void DrawGL()	// Mandatory
 
             static bool mustDisplayOkMessage = false;
             static bool useUnsignedByteMode = false;
+            static bool noBackslashesAtEndLines = false;
 
             // Load dialog
             static ImGuiFs::Dialog loadDlg;
@@ -1547,8 +1548,9 @@ void DrawGL()	// Mandatory
             ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.25f);
             if (ImGui::Combo("Stringified Type",&strType,SupportedTypes::GetNames(),(int) SupportedTypes::NUM_TYPES,(int)SupportedTypes::NUM_TYPES)) mustDisplayOkMessage = false;
             ImGui::PopItemWidth();
-            if (filePathToStringifyIsValid && (strType==0 || strType==4 || strType==7)) {
-                ImGui::Checkbox("Serialize UNSIGNED bytes###FiletostringifyunsignedByteChb",&useUnsignedByteMode);
+            if (filePathToStringifyIsValid) {
+                if (strType==0 || strType==4 || strType==7) ImGui::Checkbox("Serialize UNSIGNED bytes###FiletostringifyunsignedByteChb",&useUnsignedByteMode);
+                else if (strType==1)    ImGui::Checkbox("Serialize WITHOUT backslashes at end lines###FiletostringifyNoBackslashesChb",&noBackslashesAtEndLines);
             }
             ImGui::EndGroup();
 
@@ -1563,7 +1565,7 @@ void DrawGL()	// Mandatory
                         ok = false;ImVector<char> buff2;
                         switch (strType)    {
                         case SupportedTypes::TYPE_RAW_BINARY:   ok = ImGui::BinaryStringify(&buff[0],buff.size(),buff2,80,useUnsignedByteMode);break;
-                        case SupportedTypes::TYPE_RAW_TEXT:     ok = ImGui::TextStringify(&buff[0],buff2);break;
+                        case SupportedTypes::TYPE_RAW_TEXT:     ok = ImGui::TextStringify(&buff[0],buff2,0,0,noBackslashesAtEndLines);break;
                         case SupportedTypes::TYPE_BASE64:       ok = ImGui::Base64Encode(&buff[0],buff.size(),buff2,true);break;    // This method has an argument that stringify the output layout for us
                         case SupportedTypes::TYPE_BASE85:       ok = ImGui::Base85Encode(&buff[0],buff.size(),buff2,true);break;    // This method has an argument that stringify the output layout for us
 #                       ifdef IMGUI_USE_ZLIB

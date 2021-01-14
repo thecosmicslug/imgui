@@ -9,7 +9,7 @@ DESTDIR = ./
 # START USER EDITABLE AREA -----------------------------------------------------------------------
 
 # When commented out, main.cpp is built, otherwise main2.cpp is built
-CONFIG+= use_main2
+#CONFIG+= use_main2
 #CONFIG+= use_main3  # dev only
 #CONFIG+= use_main4  # dev only
 #CONFIG+= use_main5  # dev only

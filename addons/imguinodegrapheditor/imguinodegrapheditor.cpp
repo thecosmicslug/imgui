@@ -1377,7 +1377,7 @@ void NodeGraphEditor::render()
                         //if (io.MouseDelta.x!=0.f || io.MouseDelta.y!=0.f)   fprintf(stderr,"%d) MP{%1.0f,%1.0f} p1{%1.0f,%1.0f} p2{%1.0f,%1.0f} distanceSquared=%1.4f hoveredLinkDistSqrThres=%1.4f\n",link_idx,io.MousePos.x,io.MousePos.y,p1.x,p1.y,p2.x,p2.y,distanceSquared,hoveredLinkDistSqrThres);
                     }
 
-                    draw_list->AddBezierCurve(p1,cp1,cp2,p2,style.color_link,(nearestLinkId!=link_idx) ? link_line_width : (link_line_width*2.f), style.link_num_segments);
+                    draw_list->AddBezierCubic(p1,cp1,cp2,p2,style.color_link,(nearestLinkId!=link_idx) ? link_line_width : (link_line_width*2.f), style.link_num_segments);
                 }
                 if (nearestLinkId!=-1 && io.MouseReleased[0]) {
                     //fprintf(stderr,"Removing link at: %d\n",nearestLinkId);
@@ -1390,12 +1390,12 @@ void NodeGraphEditor::render()
                 if (dragNode.inputSlotIdx!=-1)  {   // Dragging from the output slot of dragNode
                     ImVec2 p1 = offset + dragNode.node->GetOutputSlotPos(dragNode.inputSlotIdx,currentFontWindowScale);
                     const ImVec2& p2 = io.MousePos;//offset + node_out->GetInputSlotPos(link.OutputSlot);
-                    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
+                    draw_list->AddBezierCubic(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
                 }
                 else if (dragNode.outputSlotIdx!=-1)  {  // Dragging from the input slot of dragNode
                     const ImVec2& p1 = io.MousePos;//
                     ImVec2 p2 = offset + dragNode.node->GetInputSlotPos(dragNode.outputSlotIdx,currentFontWindowScale);
-                    draw_list->AddBezierCurve(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
+                    draw_list->AddBezierCubic(p1, p1+link_cp, p2-link_cp, p2, style.color_link, link_line_width, style.link_num_segments);
                 }
             }
 

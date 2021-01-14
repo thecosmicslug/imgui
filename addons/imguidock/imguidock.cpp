@@ -847,10 +847,10 @@ struct DockContext
                 tab_base = pos.y;
 		draw_list->PathClear();
                 draw_list->PathLineTo(pos + ImVec2(-15, size.y));
-                draw_list->PathBezierCurveTo(
+                draw_list->PathBezierCubicCurveTo(
                             pos + ImVec2(-10, size.y), pos + ImVec2(-5, 0), pos + ImVec2(0, 0), 10);
                 draw_list->PathLineTo(pos + ImVec2(size.x, 0));
-                draw_list->PathBezierCurveTo(pos + ImVec2(size.x + 5, 0),
+                draw_list->PathBezierCubicCurveTo(pos + ImVec2(size.x + 5, 0),
                                              pos + ImVec2(size.x + 10, size.y),
                                              pos + ImVec2(size.x + 15, size.y),
                                              10);
