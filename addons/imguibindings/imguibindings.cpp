@@ -149,7 +149,7 @@ inline static unsigned ImImpl_NextPowerOfTwo( unsigned x ) {
     // next highest power of 2.
     return x;
 }
-inline static unsigned ImImpl_NearestPowerOfTwo( unsigned x ,unsigned max_value_allowed=2024,unsigned min_value_allowed=4) {
+inline static unsigned ImImpl_NearestPowerOfTwo( unsigned x ,unsigned max_value_allowed=2048,unsigned min_value_allowed=4) {
     if (ImImpl_IsPowerOfTwo(x)) return x;
     const unsigned prev = ImImpl_PreviousPowerOfTwo(x);
     const unsigned next = ImImpl_NextPowerOfTwo(x);
