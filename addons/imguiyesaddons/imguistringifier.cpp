@@ -483,7 +483,7 @@ bool BinaryStringify(const char* input, int inputSize, ImVector<char>& output, i
     b.Buf.swap(output);
     return true;
 }
-bool TextStringify(const char* input, ImVector<char>& output, int numCharsPerLineInStringifiedMode, int inputSize, bool noBackslashAtEndLines) {
+bool TextStringify(const char* input, ImVector<char>& output, int numCharsPerLineInStringifiedMode, int inputSize, bool noBackslashAtLineEnds) {
     output.clear();if (!input) return false;
     if (inputSize<=0) inputSize=strlen(input);
     output.reserve(inputSize*1.25f);
