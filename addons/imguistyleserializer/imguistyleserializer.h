@@ -36,6 +36,8 @@ enum ImGuiStyleEnum {
     ImGuiStyle_GoldenBlack, // Posted by @CookiePLMonster here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
     ImGuiStyle_Windowed,               // Badly adapted from the Win98-DearImgui customization made by @JakeCoxon in his fork here https://github.com/JakeCoxon/imgui-win98 (hope I can use it)
     ImGuiStyle_OverShiftedBlack,    // Posted by @OverShifted here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
+    ImGuiStyle_AieKickGreenBlue,    // Posted by @aiekick here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
+    ImGuiStyle_AieKickRedDark,    // Posted by @aiekick here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
 
     ImGuiStyle_DarkOpaqueInverse,
     ImGuiStyle_GrayCodz01Inverse,

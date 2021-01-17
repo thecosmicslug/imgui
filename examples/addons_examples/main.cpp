@@ -462,6 +462,8 @@ void DrawGL()	// Mandatory
             else if (styleEnumNum==ImGuiStyle_GoldenBlack) ImGui::SetTooltip("%s","\"GoldenBlack\"\nPosted by @CookiePLMonster here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_Windowed) ImGui::SetTooltip("%s","\"Windowed\"\nBadly adapted from the Win98-DearImgui\ncustomization made by @JakeCoxon in his fork here:\nhttps://github.com/JakeCoxon/imgui-win98\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_OverShiftedBlack) ImGui::SetTooltip("%s","\"OverShiftedBlack\"\nPosted by @OverShifted here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_AieKickGreenBlue) ImGui::SetTooltip("%s","\"AieKickGreenBlue\"\nPosted by @aiekick here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_AieKickRedDark) ImGui::SetTooltip("%s","\"AieKickRedDark\"\nPosted by @aiekick here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
         }
 
         ImGui::SameLine();
