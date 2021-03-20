@@ -245,11 +245,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
 
         // Update contents size from last frame for auto-fitting (or use explicit size)
-        window->ContentSize = CalcWindowContentSize(window);
+        CalcWindowContentSizes(window, &window->ContentSize, &window->ContentSizeIdeal);
         if (window->HiddenFramesCanSkipItems > 0)
             window->HiddenFramesCanSkipItems--;
         if (window->HiddenFramesCannotSkipItems > 0)
             window->HiddenFramesCannotSkipItems--;
+        if (window->HiddenFramesForRenderOnly > 0)
+            window->HiddenFramesForRenderOnly--;
 
         // Hide new windows for one frame until they calculate their size
         if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
@@ -304,7 +306,9 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         IM_ASSERT(window->DrawList->CmdBuffer.Size == 1 && window->DrawList->CmdBuffer[0].ElemCount == 0);
         window->DrawList->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
-        ImRect viewport_rect(GetViewportRect());
+
+        ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)GetMainViewport();
+        ImRect viewport_rect(viewport->GetMainRect());
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip)
             PushClipRect(parent_window->ClipRect.Min, parent_window->ClipRect.Max, true);
         else
@@ -638,7 +642,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                     alpha = g.NextWindowData.BgAlphaVal;
                 if (alpha != 1.0f)
                     bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(alpha) << IM_COL32_A_SHIFT);
-                window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight()), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
+                window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight()), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawFlags_RoundCornersAll : ImDrawFlags_RoundCornersBottom);
             }
 
 
@@ -651,13 +655,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 if (gImGuiDockpanelManagerExtendedStyle)    {
                     ImGui::ImDrawListAddRectWithVerticalGradient(window->DrawList,
                         title_bar_rect.GetTL(), title_bar_rect.GetBR(),title_bar_col,0.15f,0,
-                        window_rounding, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight,1.f
+                        window_rounding, ImDrawFlags_RoundCornersTopLeft|ImDrawFlags_RoundCornersTopRight,1.f
                     );
                 }
                 else
 #               endif // (defined(IMGUIHELPER_H_) && !defined(NO_IMGUIHELPER_DRAW_METHODS))
                 {
-                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), title_bar_col, window_rounding, ImDrawCornerFlags_TopLeft|ImDrawCornerFlags_TopRight);
+                    window->DrawList->AddRectFilled(title_bar_rect.GetTL(), title_bar_rect.GetBR(), title_bar_col, window_rounding, ImDrawFlags_RoundCornersTopLeft|ImDrawFlags_RoundCornersTopRight);
                 }
             }
 
@@ -666,7 +670,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             {
                 ImRect menu_bar_rect = window->MenuBarRect();
                 menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
-                window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawCornerFlags_Top);
+                window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawFlags_RoundCornersTop);
                 if (style.FrameBorderSize > 0.0f && menu_bar_rect.Max.y < window->Pos.y + window->Size.y)
                     window->DrawList->AddLine(menu_bar_rect.GetBL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
             }
@@ -699,7 +703,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 if (!(flags & ImGuiWindowFlags_NoTitleBar)) window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border));
             }*/
             if ((window_border_size > 0.0f && !(flags & ImGuiWindowFlags_NoBackground)) || gImGuiDockPanelManagerAlwaysDrawExternalBorders)
-                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding, ImDrawCornerFlags_All, window_border_size);
+                window->DrawList->AddRect(window->Pos, window->Pos+window->Size, GetColorU32(ImGuiCol_Border), window_rounding, ImDrawFlags_RoundCornersAll, window_border_size);
             /*if (border_held != -1)
             {
                 const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window_rounding + 1.0f + g.FontSize * 0.2f);
@@ -944,6 +948,13 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         // Update the Hidden flag
         window->Hidden = (window->HiddenFramesCanSkipItems > 0) || (window->HiddenFramesCannotSkipItems > 0);
 
+        // Disable inputs for requested number of frames
+        if (window->DisableInputsFrames > 0)
+        {
+            window->DisableInputsFrames--;
+            window->Flags |= ImGuiWindowFlags_NoInputs;
+        }
+
         // Update the SkipItems flag, used to early out of all items functions (no layout required)
         bool skip_items = false;
         if (window->Collapsed || !window->Active || window->Hidden)
@@ -1093,7 +1104,7 @@ void ImGui::PanelManager::Pane::AssociatedWindow::draw(const ImGui::PanelManager
             windowDrawer(wd);
             //-----------------------------------------------------------------------------------------------
             window = g.CurrentWindow;
-            wd.persistFocus = (g.HoveredWindow == window || g.HoveredRootWindow == window || (hovered && wd.isResizing));
+            wd.persistFocus = g.HoveredWindow ? (g.HoveredWindow->RootWindow == window || g.HoveredWindow->RootWindow == window || (hovered && wd.isResizing)) : false;
             if (hovered && !wd.persistFocus)    {
                 const ImVec2& mp = ImGui::GetIO().MousePos;
                 if (mp.x!=-1 && mp.y!=-1)   {

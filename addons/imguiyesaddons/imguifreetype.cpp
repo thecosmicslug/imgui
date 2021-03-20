@@ -115,7 +115,7 @@ ImVector<ImU32> DefaultRasterizationFlagVector;
         SetPixelHeight((uint32_t)cfg.SizePixels);
 
         // Convert to freetype flags (nb: Bold and Oblique are processed separately)
-        UserFlags = cfg.RasterizerFlags | extra_user_flags;
+        UserFlags = cfg.FontBuilderFlags | extra_user_flags;
         FreetypeLoadFlags = FT_LOAD_NO_BITMAP;
         if (UserFlags & ImGuiFreeType::NoHinting)      FreetypeLoadFlags |= FT_LOAD_NO_HINTING;
         if (UserFlags & ImGuiFreeType::NoAutoHint)     FreetypeLoadFlags |= FT_LOAD_NO_AUTOHINT;
@@ -278,7 +278,7 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 extra_flags=0,const ImVector<ImU3
 
     atlas->TexID = NULL;
     atlas->TexWidth = atlas->TexHeight = 0;
-    atlas->TexUvWhitePixel = ImVec2(0, 0);
+    atlas->TexUvWhitePixel = ImVec2(0.0f, 0.0f);
     atlas->ClearTexData();
 
     ImVector<FreeTypeFont> fonts;
@@ -336,6 +336,7 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 extra_flags=0,const ImVector<ImU3
     ImFontAtlasBuildPackCustomRects(atlas, &context);
 
     // Render characters, setup ImFont and glyphs for runtime
+    bool tex_use_colors = true;
     for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
     {
         ImFontConfig& cfg = atlas->ConfigData[input_i];
@@ -390,7 +391,7 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 extra_flags=0,const ImVector<ImU3
 
 
                 // Register glyph
-                dst_font->AddGlyph((ImWchar)codepoint,
+                dst_font->AddGlyph(&cfg,(ImWchar)codepoint,
                     glyph_info.OffsetX + char_off_x,
                     glyph_info.OffsetY + font_off_y,
                     glyph_info.OffsetX + char_off_x + glyph_info.Width,
@@ -400,9 +401,15 @@ bool BuildFontAtlas( ImFontAtlas* atlas, ImU32 extra_flags=0,const ImVector<ImU3
                     (rect.x + glyph_info.Width) / (float)atlas->TexWidth,
                     (rect.y + glyph_info.Height) / (float)atlas->TexHeight,
                     char_advance_x_mod);
+
+                /*ImFontGlyph* dst_glyph = &dst_font->Glyphs.back();
+                IM_ASSERT(dst_glyph->Codepoint == src_glyph.Codepoint);
+                if (src_glyph.Info.IsColored)
+                    dst_glyph->Colored = tex_use_colors = true;*/
             }
         }
     }
+    atlas->TexPixelsUseColors = tex_use_colors;
 
     // Cleanup
     for (int n = 0; n < fonts.Size; n++)

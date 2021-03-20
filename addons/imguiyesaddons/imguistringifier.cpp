@@ -511,11 +511,11 @@ bool TextStringify(const char* input, ImVector<char>& output, int numCharsPerLin
                 output.push_back('"');                
                 if (i==inputSize-1) {
                     endFile = true;
-                    if (!noBackslashAtEndLines) output.push_back(';');
+                    if (!noBackslashAtLineEnds) output.push_back(';');
                     output.push_back('\n');
                 }
                 else {
-                    if (!noBackslashAtEndLines) {
+                    if (!noBackslashAtLineEnds) {
                         output.push_back('\t');
                         output.push_back('\\');
                     }
@@ -537,11 +537,11 @@ bool TextStringify(const char* input, ImVector<char>& output, int numCharsPerLin
 
                 if (i==inputSize-1) {
                     endFile = true;
-                    if (!noBackslashAtEndLines) output.push_back(';');
+                    if (!noBackslashAtLineEnds) output.push_back(';');
                     output.push_back('\n');
                 }
                 else {
-                    if (!noBackslashAtEndLines) {
+                    if (!noBackslashAtLineEnds) {
                         output.push_back('\t');
                         output.push_back('\\');
                     }
@@ -559,7 +559,7 @@ bool TextStringify(const char* input, ImVector<char>& output, int numCharsPerLin
     if (!endFile)   {
         output.push_back('"');
 
-        if (!noBackslashAtEndLines) output.push_back(';');
+        if (!noBackslashAtLineEnds) output.push_back(';');
         output.push_back('\n');
         //--------------------
     }

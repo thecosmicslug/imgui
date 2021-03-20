@@ -3174,7 +3174,7 @@ void TreeViewNode::render(void* ptr,int numIndents)   {
                     const ImU32 fillColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.1f));
                     tvhs.window->DrawList->AddRectFilled(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,fillColor);
                     const ImU32 borderColor = ImGui::ColorConvertFloat4ToU32(ImVec4(textColor.x,textColor.y,textColor.z,textColor.w*0.15f));
-                    tvhs.window->DrawList->AddRect(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,borderColor,0.0f,0x0F,textSize.y*0.1f);
+                    tvhs.window->DrawList->AddRect(tvhs.window->DC.CursorPos+shadowOffset,tvhs.window->DC.CursorPos+textSize,borderColor,0.0f,ImDrawFlags_RoundCornersAll,textSize.y*0.1f);
                 }
                 if (state&STATE_DEFAULT)    {
                     shadowOffset.y*=0.5f;
@@ -4050,12 +4050,12 @@ bool CheckboxStyled(const char* label, bool* v,const ImU32* pOptionalEightColors
     if (t>0) {
 	ImU32 fillColor0 = pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[5] : pOptionalEightColors[4]) :
 	    (GetColorU32((held || hovered) ? ImGuiCol_ButtonHovered : ImGuiCol_Button));
-        window->DrawList->AddRectFilled(innerFrame0.Min, innerFrame0.Max, fillColor0, rounding, t<1 ? ImDrawCornerFlags_Left : ImDrawCornerFlags_All/*9 : 15*/);
+        window->DrawList->AddRectFilled(innerFrame0.Min, innerFrame0.Max, fillColor0, rounding, t<1 ? ImDrawFlags_RoundCornersLeft : ImDrawFlags_RoundCornersAll);
     }
     if (t<1) {
 	ImU32 fillColor1 = pOptionalEightColors ? ((held || hovered) ? pOptionalEightColors[7] : pOptionalEightColors[6]) :
         (GetColorU32((held || hovered) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg));
-        window->DrawList->AddRectFilled(innerFrame1.Min, innerFrame1.Max, fillColor1, rounding, t>0 ?  ImDrawCornerFlags_Right : ImDrawCornerFlags_All/*6 : 15*/);
+        window->DrawList->AddRectFilled(innerFrame1.Min, innerFrame1.Max, fillColor1, rounding, t>0 ?  ImDrawFlags_RoundCornersRight : ImDrawFlags_RoundCornersAll);
     }
     if (style.FrameBorderSize)   {
         ImRect innerFrame(innerFrame0.Min,innerFrame1.Max);

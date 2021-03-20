@@ -2399,7 +2399,7 @@ void CodeEditor::render()   {
                             startPos.x+= windowPos.x - ImGui::GetScrollX() - lineHeight*0.09f;
                             startPos.y+= windowPos.y - ImGui::GetScrollY();
                             ImDrawList* drawList = ImGui::GetWindowDrawList();
-                            ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.25f,startPos.y+regionNameSize.y),bgColor,0,0.f,0x0F,0);
+                            ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.25f,startPos.y+regionNameSize.y),bgColor,0,0.f,ImDrawFlags_RoundCornersNone,0);
                         }
                         // Normal folding
                         ImGui::Text("%s",line->foldingStartTag->title.c_str());
@@ -2416,7 +2416,7 @@ void CodeEditor::render()   {
                             startPos.x+= windowPos.x - ImGui::GetScrollX() - lineHeight*0.18f;
                             startPos.y+= windowPos.y - ImGui::GetScrollY();
                             ImDrawList* drawList = ImGui::GetWindowDrawList();
-                            ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.5f,startPos.y+regionNameSize.y),ImColor(style.color_folded_region_background),ImColor(style.color_syntax_highlighting[sht]),0.f,0x0F,folded_region_contour_thickness);
+                            ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,startPos,ImVec2(startPos.x+regionNameSize.x+lineHeight*0.5f,startPos.y+regionNameSize.y),ImColor(style.color_folded_region_background),ImColor(style.color_syntax_highlighting[sht]),0.f,ImDrawFlags_RoundCornersNone,folded_region_contour_thickness);
 
                             // Draw text
                             ImGui::Text("%s",regionName);
@@ -2537,11 +2537,11 @@ void CodeEditor::render()   {
             screenEndPos.y = endPos.y + windowPos.y - ImGui::GetScrollY();
             if (line->attributes&Line::AT_ERROR) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
-                ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_error,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
+                ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_error,style.color_icon_margin_contour,0.f,ImDrawFlags_RoundCornersNone,icon_margin_contour_thickness);
             }
             else if (line->attributes&Line::AT_WARNING) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
-                ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_warning,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
+                ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,screenStartPos,screenEndPos,style.color_icon_margin_warning,style.color_icon_margin_contour,0.f,ImDrawFlags_RoundCornersNone,icon_margin_contour_thickness);
             }
             if (line->attributes&Line::AT_BREAKPOINT) {
                 ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -2559,7 +2559,7 @@ void CodeEditor::render()   {
                 const ImVec2 a(center.x-radius,center.y-radius);
                 const ImVec2 b(center.x+radius,center.y+radius);
                 //ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,a,b,style.color_margin_bookmark,style.color_margin_contour);
-                ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,a,b,style.color_icon_margin_bookmark,style.color_icon_margin_contour,0.f,0x0F,icon_margin_contour_thickness);
+                ImGui::CodeEditorDrawListHelper::ImDrawListAddRect(drawList,a,b,style.color_icon_margin_bookmark,style.color_icon_margin_contour,0.f,ImDrawFlags_RoundCornersNone,icon_margin_contour_thickness);
             }
             ImGui::SetCursorPos(endPos);
 
@@ -3864,7 +3864,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     const bool user_clicked = hovered && io.MouseClicked[0];
     const bool user_scrolled = g.ActiveId == 0 && state != NULL && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
-    const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_NavKeyboard));
+    const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_Keyboard));
 
     bool clear_active_id = false;
 
@@ -3902,7 +3902,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 state->ScrollX = 0.0f;
                 stb_textedit_initialize_state(&state->Stb, false);
             }
-            if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
+            if (flags & ImGuiInputTextFlags_AlwaysOverwrite)
                 state->Stb.insert_mode = true;
         }
         SetActiveID(id, window);

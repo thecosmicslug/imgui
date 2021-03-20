@@ -102,7 +102,9 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[AntiAliasedLinesUseTex]\n%d\n", style.AntiAliasedLinesUseTex?1:0);
     fprintf(f, "[AntiAliasedFill]\n%d\n", style.AntiAliasedFill?1:0);
     fprintf(f, "[CurveTessellationTol]\n%1.3f\n", style.CurveTessellationTol);
-    fprintf(f, "[CircleSegmentMaxError]\n%1.3f\n", style.CircleSegmentMaxError);
+    //fprintf(f, "[CircleSegmentMaxError]\n%1.3f\n", style.CircleSegmentMaxError);
+    //- 2021/02/17 (1.82) - renamed rarely used style.CircleSegmentMaxError (old default = 1.60f) to style.CircleTessellationMaxError (new default = 0.30f) as the meaning of the value changed.
+    fprintf(f, "[CircleTessellationMaxError]\n%1.3f\n", style.CircleTessellationMaxError);
 
     for (size_t i = 0; i != ImGuiCol_COUNT; i++)
     {
@@ -150,6 +152,7 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
     f_data[f_size] = 0;
 
     float WindowFillAlphaDefault = -1.f;    // fallback for reloading an older file
+    float CircleSegmentMaxError = -1.f;     // fallback for reloading an older file
     // Parse file in memory
     char name[128];name[0]='\0';
     const char* buf_end = f_data + f_size;
@@ -208,7 +211,9 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
                 else if (strcmp(name, "AntiAliasedLinesUseTex")==0)    {npb=1;pb[0]=&style.AntiAliasedLinesUseTex;}
                 else if (strcmp(name, "AntiAliasedFill")==0 || strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedFill;}
                 else if (strcmp(name, "CurveTessellationTol")==0)               {npf=1;pf[0]=&style.CurveTessellationTol;}
-                else if (strcmp(name, "CircleSegmentMaxError")==0)               {npf=1;pf[0]=&style.CircleSegmentMaxError;}
+                //- 2021/02/17 (1.82) - renamed rarely used style.CircleSegmentMaxError (old default = 1.60f) to style.CircleTessellationMaxError (new default = 0.30f) as the meaning of the value changed.
+                else if (strcmp(name, "CircleTessellationMaxError")==0)               {npf=1;pf[0]=&style.CircleTessellationMaxError;}
+                else if (strcmp(name, "CircleSegmentMaxError")==0)               {npf=1;pf[0]=&CircleSegmentMaxError;}
                 else if (strcmp(name, "TabRounding")==0)         {npf=1;pf[0]=&style.TabRounding;}
                 else if (strcmp(name, "TabBorderSize")==0)         {npf=1;pf[0]=&style.TabBorderSize;}
                 else if (strcmp(name, "TabMinWidthForUnselectedCloseButton")==0 ||
@@ -383,6 +388,10 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
     }
 
     if (WindowFillAlphaDefault>=0.f) style.Colors[ImGuiCol_WindowBg].w*=WindowFillAlphaDefault;
+    if (CircleSegmentMaxError>=0.f) {
+        //- 2021/02/17 (1.82) - renamed rarely used style.CircleSegmentMaxError (old default = 1.60f) to style.CircleTessellationMaxError (new default = 0.30f) as the meaning of the value changed.
+        style.CircleTessellationMaxError = CircleSegmentMaxError*0.30f/1.60f;
+    }
 
     // Release memory
     ImGui::MemFree(f_data);
