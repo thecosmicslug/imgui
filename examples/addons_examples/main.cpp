@@ -2195,9 +2195,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
     setlocale(LC_TIME, "");         // This affects imguidatechooser (the language of the names of the months)
 #   endif //__EMSCRIPTEN__
 
-    //#ifdef YES_IMGUIFREETYPE    // Testing only (to remove)
-    //ImGuiFreeType::DefaultRasterizationFlags = ImGuiFreeType::Bold|ImGuiFreeType::Oblique;
-    //#endif //YES_IMGUIFREETYPE
+/*#   ifdef IMGUI_ENABLE_FREETYPE    // Testing only (to remove)
+    //gImGuiDefaultFontBuilderFlags are applied to the whole font atlas
+    gImGuiDefaultFontBuilderFlags = ImGuiFreeTypeBuilderFlags_Bold|ImGuiFreeTypeBuilderFlags_Oblique; // ImGuiFreeTypeBuilderFlags set globally
+#   endif //IMGUI_ENABLE_FREETYPE*/
 
 #   ifndef USE_ADVANCED_SETUP
 
@@ -2235,6 +2236,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
     //ImImpl_SdfShaderSetParams(ImVec4(0.460f,0.365f,0.120f,0.04f));	// (optional) Sets sdf params
 #   endif //IMIMPL_BUILD_SDF
 
+/*#   ifdef IMGUI_ENABLE_FREETYPE    // Testing only (to remove)
+    cfg.FontBuilderFlags|= ImGuiFreeTypeBuilderFlags_Bold|ImGuiFreeTypeBuilderFlags_Oblique;    // ImGuiFreeTypeBuilderFlags on a font basis
+#   endif //IMGUI_ENABLE_FREETYPE*/
+
     // These lines load an embedded font (with no compression).
     const unsigned char ttfMemory[] =
 #   include "./fonts/DejaVuSerifCondensed-Bold.ttf.inl"
@@ -2267,7 +2272,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
     gImGuiInitParams.gFpsClampOutsideImGui = 10.f;  // Optional Max allowed FPS (!=0, default -1 => unclamped). Useful for setting a different FPS for your main rendering.
 
 //#   define TEST_IMAGE_GLYPHS      // Experimental (currently it works only with user glyphs from uniformly sized tiles in images (or from a whole image) (good for image icons), but we could extend the code in the future if requested to support font glyphs of different widths)
-                                    // Warning: this doesn't seem to work correctly when YES_IMGUIFREETYPE is defined
 #   ifdef TEST_IMAGE_GLYPHS
     // 'S','P','F'
     ImImpl_InitParams::CustomFontGlyph::ImageData imageData(512,512,"Tile8x8.png",8,8); // The image we want to use for our glyphs

@@ -133,7 +133,6 @@ Currently "yes addons" are:
 -> imguisoloud.h/cpp:		depends on STL. License:  ZLib/LibPNG (and others more liberal) Link: [http://sol.gfxile.net/soloud/index.html]
 -> imguitinyfiledialogs.h/cpp:	depends on Comdlg32.lib and Ole32.lib on Windows. Link: [http://tinyfiledialogs.sourceforge.net]
 -> imguisqlite3.h/cpp:		depends on -lsqlite3. It's CppSQLite from [http://www.codeproject.com/KB/database/CppSQLite.aspx]
--> imguifreetype.h/cpp:		depends on freetype2 (-lfreetype). License: MIT. It allows better font hinting, and Bold and Oblique variations of the .ttf font. Link: [https://github.com/Vuhdo/imgui_freetype]
 -> imguiminigames.h/cpp:	no dependencies. For a list of minigames and their own license, please read addons/yes_addons/imguiminigames.h.
 -> imguibz2.h/cpp:		no dependencies. It's libbzip2 (http://www.bzip.org/), inlined and made a bit more ImGui-friendly. License: BSD-style. It allows loading .ttf.bz2 font files when using some imguibinding. [You can define BZ_DECOMPRESS_ONLY to reduce memory impact a bit].
 -> imguistringifier.h/cpp:	no dependencies. It includes libb64 (libb64.sourceforge.net License: Public Domain). It makes easier to embed files inside source code (e.g. ttf fonts, shader source code, and so on).
@@ -142,6 +141,12 @@ Currently "yes addons" are:
 
 Tip: If you used the NO_IMGUI_ADDONS definition to disable all the "normal" addons, then all your addons behave like yes_addons!
      That means that you can define, for example, YES_IMGUISTYLESERIALIZER to re-enable the "normal" imguistyleserializer addon.
+
+Warning: imguifreetype.h/cpp has been REMOVED!!!
+    Please use the new Dear ImGui definition IMGUI_ENABLE_FREETYPE instead (and link to libfreeetype).
+    When using imgui_user.h/.inl in this repository, ./misc/freetype/imgui_freetype.cpp will be automatically compiled for you.
+    A global variable named gImGuiDefaultFontBuilderFlags can be used to set ImGuiFreeTypeBuilderFlags in advance too (please see the main function in examples/addon_examples/main.cpp).
+
 
 ===========================================
 HOW TO USE IMGUI ADDONS IN YOUR PROJECTS:
@@ -205,7 +210,6 @@ IMIMPL_BUILD_SDF				# builds Signed Distance Fonts for ImGui. To display them co
 						# Warning: ARTIFACTS will appear when displaying any user ImTextureID fragment with ALPHA inside the range (0,255) (edges excluded).
 						# This also affects all the images displayed in the imguiimageeditor addon, when their ALPHA is not 0 or 255.
 						# (This happens because we use a single shader to display everything).
-						# Warning: I'm not sure this works with the imguifreetype addon (YES_IMGUIFREETYPE).
 
 IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY	    # It uses the GL_ARB_TEXTURE_SWIZZLE OpenGL extension (core in OpenGL 3.3, and present as an extension on many systems in previous OpenGL versions),
 								    # to reduce GPU font texture memory to about 0.25 times the full RGBA memory.

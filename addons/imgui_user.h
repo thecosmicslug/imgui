@@ -237,10 +237,6 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #		undef YES_IMGUIMINIGAMES
 #		define YES_IMGUIMINIGAMES
 #	endif //NO_IMGUIMINIGAMES
-//#	ifndef NO_IMGUIFREETYPE	// We leave YES_IMGUIFREETYPE out
-//#		undef YES_IMGUIFREETYPE
-//#		define YES_IMGUIFREETYPE
-//#	endif //NO_IMGUIFREETYPE
 #endif //YES_IMGUIADDONS_ALL
 
 #ifdef YES_IMGUIPDFVIEWER
@@ -267,8 +263,14 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #include "./imguiyesaddons/imguiimageeditor.h"
 #endif //YES_IMGUIIMAGEEDITOR
 #ifdef YES_IMGUIFREETYPE
-#include "./imguiyesaddons/imguifreetype.h"
+#   error YES_IMGUIFREETYPE is no more supported. Please use IMGUI_ENABLE_FREETYPE instead (and ../misc/freetype/imgui_freetype.cpp will be automatically compiled).
 #endif //YES_IMGUIFREETYPE
+#ifdef IMGUI_ENABLE_FREETYPE
+#   ifndef IMGUI_FREETYPE_H_PATH
+#       define IMGUI_FREETYPE_H_PATH "../misc/freetype/imgui_freetype.h"
+#   endif
+#   include IMGUI_FREETYPE_H_PATH
+#endif //IMGUI_ENABLE_FREETYPE
 #ifdef YES_IMGUISOLOUD
 #include "./imguiyesaddons/imguisoloud.h" // Better leave it at the end...
 #endif //YES_IMGUISOLOUD

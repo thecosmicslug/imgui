@@ -124,8 +124,14 @@
 #include "./imguiyesaddons/imguiimageeditor.cpp"
 #endif //YES_IMGUIIMAGEEDITOR
 #ifdef YES_IMGUIFREETYPE
-#include "./imguiyesaddons/imguifreetype.cpp"
+#   error YES_IMGUIFREETYPE is no more supported. Please use IMGUI_ENABLE_FREETYPE instead (and ../misc/freetype/imgui_freetype.cpp will be automatically compiled).
 #endif //YES_IMGUIFREETYPE
+#ifdef IMGUI_ENABLE_FREETYPE
+#   ifndef IMGUI_FREETYPE_CPP_PATH
+#       define IMGUI_FREETYPE_CPP_PATH "../misc/freetype/imgui_freetype.cpp"
+#   endif
+#   include IMGUI_FREETYPE_CPP_PATH
+#endif //IMGUI_ENABLE_FREETYPE
 #ifdef YES_IMGUIMINIGAMES
 #include "./imguiyesaddons/imguiminigames.cpp"
 #endif //YES_IMGUIMINIGAMES

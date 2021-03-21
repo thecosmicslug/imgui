@@ -13,6 +13,7 @@ bool gImGuiFunctionKeyDown[12]={false,false,false,false,false,false,false,false,
 bool gImGuiFunctionKeyPressed[12]={false,false,false,false,false,false,false,false,false,false,false,false};
 bool gImGuiFunctionKeyReleased[12]={false,false,false,false,false,false,false,false,false,false,false,false};
 int gImGuiNumTextureBindingsPerFrame;    // read-only
+unsigned int gImGuiDefaultFontBuilderFlags = 0;
 ImImplVoidDelegate gImGuiPostInitGLCallback   = NULL;
 ImImplVoidDelegate gImGuiPreDrawGLCallback    = NULL;
 ImImplVoidDelegate gImGuiPreDrawGLSwapBuffersCallback = NULL;
@@ -578,13 +579,10 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
     unsigned char* pixels = NULL;
     int width, height,numChannels = 4;
     //fprintf(stderr,"Loading font texture\n");
+    io.Fonts->FontBuilderFlags|=gImGuiDefaultFontBuilderFlags;
 #	ifdef IMIMPL_BUILD_SDF
 	if (!io.Fonts->TexPixelsAlpha8) {
-#   	ifndef YES_IMGUIFREETYPE
 		io.Fonts->GetTexDataAsAlpha8(&io.Fonts->TexPixelsAlpha8,NULL,NULL);
-#		else //YES_IMGUIFREETYPE
-		ImGuiFreeType::GetTexDataAsAlpha8(io.Fonts,&io.Fonts->TexPixelsAlpha8,NULL,NULL,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
-#		endif //YES_IMGUIFREETYPE
 	}    	
     if (!hasCustomGlyphs) {
         IM_ASSERT(!io.Fonts->TexPixelsRGBA32);
@@ -594,18 +592,10 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
 
 #   if (defined(IMGUI_USE_DIRECT3D9_BINDING) || !defined(IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY))
         numChannels = 4;
-#       ifndef YES_IMGUIFREETYPE
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-#       else //YES_IMGUIFREETYPE
-        ImGuiFreeType::GetTexDataAsRGBA32(io.Fonts,&pixels, &width, &height,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
-#       endif //YES_IMGUIFREETYPE
 #   else //IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
         numChannels = 1;
-#       ifndef YES_IMGUIFREETYPE
         io.Fonts->GetTexDataAsAlpha8(&pixels, &width, &height);
-#       else //YES_IMGUIFREETYPE
-        ImGuiFreeType::GetTexDataAsAlpha8(io.Fonts,&pixels, &width, &height,NULL,ImGuiFreeType::DefaultRasterizationFlags,&ImGuiFreeType::DefaultRasterizationFlagVector);
-#       endif //YES_IMGUIFREETYPE
 #   endif //IMIMPL_USE_ARB_TEXTURE_SWIZZLE_TO_SAVE_FONT_TEXTURE_MEMORY
 
         if (hasCustomGlyphs)    {

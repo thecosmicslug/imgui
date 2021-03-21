@@ -143,6 +143,7 @@ extern bool gImGuiFunctionKeyDown[12];
 extern bool gImGuiFunctionKeyPressed[12];
 extern bool gImGuiFunctionKeyReleased[12];
 extern int gImGuiNumTextureBindingsPerFrame;    // read-only
+extern unsigned int gImGuiDefaultFontBuilderFlags;
 typedef void (*ImImplVoidDelegate)();
 extern ImImplVoidDelegate gImGuiPostInitGLCallback;
 extern ImImplVoidDelegate gImGuiPreDrawGLCallback;
