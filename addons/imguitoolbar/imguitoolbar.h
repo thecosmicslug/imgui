@@ -109,7 +109,7 @@ class Toolbar {
 public:
     struct Button {
         char tooltip[1024];
-        void* user_texture_id;
+        ImTextureID user_texture_id;
         ImVec2 uv0;
         ImVec2 uv1;
         ImVec2 size;

@@ -3483,8 +3483,9 @@ static void MyTextLineWithSH(const BadCodeEditorData& ceData,const char* fmt, ..
 // START COPYING DEFINITIONS AND METHODS BURIED INTO imgui_widgets.cpp
 //=============================================================================
 // Return false to discard a character (same as InputTextFilterCharacter(...) from imgui_widgets.cpp).
-static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, ImGuiInputSource input_source)
 {
+    IM_ASSERT(input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Clipboard);
     unsigned int c = *p_char;
 
     if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
@@ -3496,12 +3497,15 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
             return false;
     }
 
-    // We ignore Ascii representation of delete (emitted from Backspace on OSX, see #2578, #2817)
-     if (c == 127)
-         return false;
-
-    if (c >= 0xE000 && c <= 0xF8FF) // Filter private Unicode range. I don't imagine anybody would want to input them. GLFW on OSX seems to send private characters for special keys like arrow keys.
-        return false;
+    if (input_source != ImGuiInputSource_Clipboard)
+    {
+        // We ignore Ascii representation of delete (emitted from Backspace on OSX, see #2578, #2817)
+        if (c == 127)
+            return false;
+        // Filter private Unicode range. GLFW on OSX seems to send private characters for special keys like arrow keys (FIXME)
+        if (c >= 0xE000 && c <= 0xF8FF)
+            return false;
+    }
 
     if (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_CharsScientific))
     {
@@ -3993,7 +3997,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 {
                     // Insert character if they pass filtering
                     unsigned int c = (unsigned int)io.InputQueueCharacters[n];
-                    if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
+                    if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                         state->OnKeyPressed((int)c);
                 }
 
@@ -4071,13 +4075,13 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 }
 
                 unsigned int c = '\n'; // Insert new line
-                if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
+                if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                     state->OnKeyPressed((int)c);
 
                 if (matchTabsInPreviousLine)    {
                     unsigned int tab = '\t';// Insert the same amount of tabs from the previous line
                     for (int i=0;i<numTabs;i++) {
-                        if (InputTextFilterCharacter(&tab, flags, callback, callback_user_data))
+                        if (InputTextFilterCharacter(&tab, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                             state->OnKeyPressed((int)tab);
                     }
                 }
@@ -4086,7 +4090,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressedMap(ImGuiKey_Tab) && !is_ctrl_down && !is_shift_down && !is_alt_down && !is_readonly)
         {
             unsigned int c = '\t'; // Insert TAB
-            if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
+            if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                 state->OnKeyPressed((int)c);
         }
         else if (IsKeyPressedMap(ImGuiKey_Escape))                              { clear_active_id = cancel_edit = true; }
@@ -4128,7 +4132,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                     s += ImTextCharFromUtf8(&c, s, NULL);
                     if (c == 0)
                         break;
-                    if (c >= 0x10000 || !InputTextFilterCharacter(&c, flags, callback, callback_user_data))
+                    if (c >= 0x10000 || !InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                         continue;
                     clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                 }
