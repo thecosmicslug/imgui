@@ -702,14 +702,18 @@ void InitImGuiFontTexture(const ImImpl_InitParams* pOptionalInitParams) {
 
     // Store our identifier
     io.Fonts->TexID = gImImplPrivateParams.fontTex;
+    IM_ASSERT(io.Fonts->IsBuilt());
 
 #   ifndef IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON
     // Cleanup (don't clear the input data if you want to append new fonts later)    
     io.Fonts->ClearInputData();
     io.Fonts->ClearTexData();
+    io.Fonts->TexReady = true;  // https://github.com/ocornut/imgui/issues/4455
 #   endif //IMGUIBINDINGS_DONT_CLEAR_INPUT_DATA_SOON
 
     //fprintf(stderr,"Loaded font texture\n");
+
+    IM_ASSERT(io.Fonts->IsBuilt());
 
 // We overuse this method to load textures from other imgui addons
 #   ifndef NO_IMGUITABWINDOW
@@ -1630,7 +1634,7 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
         for (const ImDrawCmd* pcmd = cmd_list->CmdBuffer.begin(); pcmd != cmd_list->CmdBuffer.end(); pcmd++)    {
             if (pcmd->UserCallback) pcmd->UserCallback(cmd_list, pcmd);
             else    {
-                tex = (GLuint)(intptr_t)pcmd->TextureId;
+                tex = (GLuint)(intptr_t)pcmd->GetTexID();
                 if (tex!=lastTex)   {
                     glBindTexture(GL_TEXTURE_2D, tex);
                     lastTex = tex;
@@ -1715,7 +1719,7 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
             }
             else
             {
-                tex = (GLuint)(intptr_t)pcmd->TextureId;
+                tex = (GLuint)(intptr_t)pcmd->GetTexID();
                 if (tex!=lastTex)   {
                     glBindTexture(GL_TEXTURE_2D, tex);
                     lastTex = tex;
@@ -1880,7 +1884,7 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
             }
             else
             {
-                tex = (LPDIRECT3DTEXTURE9)pcmd->TextureId;
+                tex = (LPDIRECT3DTEXTURE9)pcmd->GetTexID();
                 if (tex!=lastTex)   {
                     g_pd3dDevice->SetTexture( 0,  tex);
                     lastTex = tex;

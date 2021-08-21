@@ -801,7 +801,7 @@ bool ImageZoomAndPan(ImTextureID user_texture_id, const ImVec2& size,float aspec
 bool IsItemActiveLastFrame()    {
     ImGuiContext& g = *GImGui;
     if (g.ActiveIdPreviousFrame)
-        return g.ActiveIdPreviousFrame== GImGui->CurrentWindow->DC.LastItemId;
+        return g.ActiveIdPreviousFrame== GImGui->LastItemData.ID;
     return false;
 }
 bool IsItemJustReleased()   {return IsItemActiveLastFrame() && !ImGui::IsItemActive();}

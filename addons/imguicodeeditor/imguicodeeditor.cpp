@@ -3488,13 +3488,16 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     IM_ASSERT(input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Clipboard);
     unsigned int c = *p_char;
 
-    if (c < 128 && c != ' ' && !isprint((int)(c & 0xFF)))
+    // Filter non-printable (NB: isprint is unreliable! see #2467)
+    bool apply_named_filters = true;
+    if (c < 0x20)
     {
         bool pass = false;
         pass |= (c == '\n' && (flags & ImGuiInputTextFlags_Multiline));
         pass |= (c == '\t' && (flags & ImGuiInputTextFlags_AllowTabInput));
         if (!pass)
             return false;
+        apply_named_filters = false; // Override named filters below so newline and tabs can still be inserted.
     }
 
     if (input_source != ImGuiInputSource_Clipboard)
@@ -3507,7 +3510,8 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
             return false;
     }
 
-    if (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_CharsScientific))
+    // Generic named filters
+    if (apply_named_filters && (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_CharsScientific)))
     {
         if (flags & ImGuiInputTextFlags_CharsDecimal)
             if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
@@ -3806,6 +3810,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     //const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? (style.ItemInnerSpacing.x + label_size.x) : 0.0f, 0.0f));
 
     ImGuiWindow* draw_window = window;    
+    ImGuiItemStatusFlags item_status_flags = window? g.LastItemData.StatusFlags : 0;
 
     //static float codeEditorContentWidth = size.x;   // TODO: move to "state"
 
@@ -3849,31 +3854,29 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     ImGui::PushFont(ImFonts[FONT_STYLE_NORMAL]);
     textLineHeight = ImGui::GetTextLineHeight();
 
+    const bool hovered = ItemHoverable(frame_bb, id);
+    if (hovered)
+        g.MouseCursor = ImGuiMouseCursor_TextInput;
+
     // NB: we are only allowed to access 'edit_state' if we are the active widget.
     ImGuiInputTextState* state = ImGui::GetInputTextState(id);
 
     const bool is_ctrl_down = io.KeyCtrl;
     const bool is_shift_down = io.KeyShift;
     const bool is_alt_down = io.KeyAlt;
-    const bool focus_requested = FocusableItemRegister(window, id);//FocusableItemRegister(window, g.ActiveId == id, (flags & (ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_AllowTabInput)) == 0);    // Using completion callback disable keyboard tabbing
-    //const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
-    //const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
-
-    const bool hovered = ItemHoverable(frame_bb, id);
-    if (hovered)
-    {
-        SetHoveredID(id);
-        g.MouseCursor = ImGuiMouseCursor_TextInput;
-    }
+    const bool focus_requested_by_code = (item_status_flags & ImGuiItemStatusFlags_FocusedByCode) != 0;
+    const bool focus_requested_by_tabbing = (item_status_flags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
 
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_scrolled = g.ActiveId == 0 && state != NULL && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
     const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_Keyboard));
+    const bool user_scroll_finish = state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
+    const bool user_scroll_active = state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
+
+    const bool init_make_active = (user_clicked || user_scroll_finish || user_nav_input_start || focus_requested_by_code || focus_requested_by_tabbing);
 
     bool clear_active_id = false;
-
     bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0  || user_nav_input_start);
-    if (focus_requested || user_clicked || user_scrolled || user_nav_input_start)
+    if (init_make_active)
     {
         if (g.ActiveId != id)
         {
@@ -3941,9 +3944,11 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             state->CursorClamp();
         }
 
+        IM_ASSERT(state != NULL);
         backup_current_text_length = state->CurLenA;
+        //state->Edited = false;
         state->BufCapacityA = buf_size;
-        state->UserFlags = flags;
+        state->Flags = flags;
         state->UserCallback = callback;
         state->UserCallbackData = callback_user_data;
 
@@ -4292,7 +4297,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         }
 
         // Clear temporary user storage
-        state->UserFlags = 0;
+        state->Flags = ImGuiInputTextFlags_None;
         state->UserCallback = NULL;
         state->UserCallbackData = NULL;
 
@@ -4540,7 +4545,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         // Draw blinking cursor
         state->CursorAnim += io.DeltaTime;
         bool cursor_is_visible = (!g.IO.ConfigInputTextCursorBlink) || (state->CursorAnim <= 0.0f) || ImFmod(state->CursorAnim, 1.20f) <= 0.80f;
-        ImVec2 cursor_screen_pos = draw_pos + cursor_offset - draw_scroll;
+        ImVec2 cursor_screen_pos = ImFloor(draw_pos + cursor_offset - draw_scroll);
         ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
         if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
             draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(),GetColorU32(ceStyle.color_text));
@@ -4634,7 +4639,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
     ImGui::PopID();
 
-    window->DC.LastItemId = id; // Otherwise ImGui::IsItemActive() is wrong
+    g.LastItemData.ID = id; // Otherwise ImGui::IsItemActive() is wrong
     /*if (item_active) {
         //g.ActiveId = id;
         IM_ASSERT(g.ActiveId == id);

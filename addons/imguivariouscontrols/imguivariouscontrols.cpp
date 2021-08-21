@@ -1450,7 +1450,7 @@ static int AppendTreeNodeHeaderButtonsV(const void* ptr_id,float startWindowCurs
     ImGuiContext& g = *GImGui;
     const float buttonSz = g.FontSize;
     const ImVec2 glyphHalfSize(buttonSz*0.5f,buttonSz*0.5f);
-    ImVec2 pos(ImMin(window->DC.LastItemRect.Max.x, window->ClipRect.Max.x) - g.Style.FramePadding.x -buttonSz*0.5f, window->DC.LastItemRect.Min.y + g.Style.FramePadding.y+buttonSz*0.5f);
+    ImVec2 pos(ImMin(g.LastItemData.Rect.Max.x, window->ClipRect.Max.x) - g.Style.FramePadding.x -buttonSz*0.5f, g.LastItemData.Rect.Min.y + g.Style.FramePadding.y+buttonSz*0.5f);
     bool pressed = false,hovered = false;
 
     bool* pPressed = NULL;

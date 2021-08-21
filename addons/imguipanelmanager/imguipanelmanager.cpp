@@ -122,7 +122,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         flags = window->Flags;
 
     // Parent window is latched only on the first call to Begin() of the frame, so further append-calls can be done from a different window stack
-    ImGuiWindow* parent_window_in_stack = g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back();
+    ImGuiWindow* parent_window_in_stack = g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back().Window;
     ImGuiWindow* parent_window = first_begin_of_the_frame ? ((flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)) ? parent_window_in_stack : NULL) : window->ParentWindow;
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
     window->HasCloseButton = (p_opened != NULL);
@@ -142,12 +142,15 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
 
     // We allow window memory to be compacted so recreate the base stack when needed.
-        if (window->IDStack.Size == 0)
-            window->IDStack.push_back(window->ID);
+    if (window->IDStack.Size == 0)
+        window->IDStack.push_back(window->ID);
 
     // Add to stack
     // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
-    g.CurrentWindowStack.push_back(window);
+    ImGuiWindowStackData window_stack_data;
+    window_stack_data.Window = window;
+    window_stack_data.ParentLastItemDataBackup = g.LastItemData;
+    g.CurrentWindowStack.push_back(window_stack_data);
     g.CurrentWindow = window;
     window->DC.StackSizesOnBegin.SetToCurrentState();
     g.CurrentWindow = NULL;
@@ -752,16 +755,17 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         window->DC.CurrLineSize = window->DC.PrevLineSize = ImVec2(0.0f, 0.0f);
         window->DC.CurrLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
 
+        window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
         window->DC.NavHideHighlightOneFrame = false;
         window->DC.NavHasScroll = (window->ScrollMax.y > 0.0f);
-        window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
-        window->DC.NavLayerActiveMaskNext = 0x00;
+        window->DC.NavLayersActiveMask = window->DC.NavLayersActiveMaskNext;
+        window->DC.NavLayersActiveMaskNext = 0x00;
 
         window->DC.MenuBarAppending = false;
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
         window->DC.ParentLayoutType = parent_window ? parent_window->DC.LayoutType : ImGuiLayoutType_Vertical;
-        window->DC.ItemFlags = ImGuiItemFlags_Default_;
+        g.CurrentItemFlags = ImGuiItemFlags_None;
 
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
@@ -776,7 +780,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         //window->DC.ItemFlags = parent_window ? parent_window->DC.ItemFlags : ImGuiItemFlags_Default_;
         //if (parent_window)  window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
 
-        window->DC.MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
+        window->DC.MenuColumns.Update(style.ItemSpacing.x, window_just_activated_by_user);
+
 
         if (window->AutoFitFramesX > 0)
             window->AutoFitFramesX--;
@@ -794,10 +799,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
         {
 
             // Close & collapse button are on layer 1 (same as menus) and don't default focus
-            const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
-            window->DC.ItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
+            const ImGuiItemFlags item_flags_backup =  g.CurrentItemFlags;
+            g.CurrentItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
             window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
-            window->DC.NavLayerActiveMask = (1 << ImGuiNavLayer_Menu);
+            window->DC.NavLayersActiveMask = (1 << ImGuiNavLayer_Menu);
 
             if (p_opened != NULL)   {
                 //*p_opened = CloseWindowButton(p_opened);
@@ -830,8 +835,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
             // Restore layer
             window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
-            window->DC.NavLayerActiveMask = (1 << ImGuiNavLayer_Main);
-            window->DC.ItemFlags = item_flags_backup;
+            window->DC.NavLayersActiveMask = (1 << ImGuiNavLayer_Main);
+             g.CurrentItemFlags = item_flags_backup;
 
             // Title bar text (FIXME: refactor text alignment facilities along with RenderText helpers)
             const ImVec2 text_size = CalcTextSize(name, NULL, true);
@@ -903,9 +908,10 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // We fill last item data based on Title Bar, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
         // This is useful to allow creating context menus on title bar only, etc.
-        window->DC.LastItemId = window->MoveId;
-        window->DC.LastItemStatusFlags = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
-        window->DC.LastItemRect = title_bar_rect;
+        g.LastItemData.ID = window->MoveId;
+        g.LastItemData.InFlags = g.CurrentItemFlags;    // new...
+        g.LastItemData.StatusFlags = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
+        g.LastItemData.Rect = title_bar_rect;
     }
 
     // Inner clipping rectangle
@@ -983,13 +989,13 @@ static void DockWindowEnd()
     if (!(window->Flags & ImGuiWindowFlags_ChildWindow))    // FIXME: add more options for scope of logging
         ImGui::LogFinish();
 
-    // Pop
-    // NB: we don't clear 'window->RootWindow'. The pointer is allowed to live until the next call to Begin().
+    // Pop from window stack
+    g.LastItemData = g.CurrentWindowStack.back().ParentLastItemDataBackup;
     g.CurrentWindowStack.pop_back();
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
     window->DC.StackSizesOnBegin.CompareWithCurrentState();
-    SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
+    SetCurrentWindow(g.CurrentWindowStack.Size == 0 ? NULL : g.CurrentWindowStack.back().Window);
 }
 
 } // namespace ImGui
