@@ -38,12 +38,14 @@ enum ImGuiStyleEnum {
     ImGuiStyle_OverShiftedBlack,    // Posted by @OverShifted here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
     ImGuiStyle_AieKickGreenBlue,    // Posted by @aiekick here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
     ImGuiStyle_AieKickRedDark,    // Posted by @aiekick here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
+    ImGuiStyle_DeepDark,     // Posted by @janekb04 here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
 
     ImGuiStyle_DarkOpaqueInverse,
     ImGuiStyle_GrayCodz01Inverse,
     ImGuiStyle_PurpleInverse,
     ImGuiStyle_LightGreenInverse,
     ImGuiStyle_DesignInverse,
+    ImGuiStyle_DeepDarkInverse,
 
     ImGuiStyle_Count
 };

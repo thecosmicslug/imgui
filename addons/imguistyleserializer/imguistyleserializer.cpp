@@ -67,11 +67,14 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     if (!f)  return false;
  
     fprintf(f, "[Alpha]\n%1.3f\n", style.Alpha);
+    fprintf(f, "[DisabledAlpha]\n%1.3f\n", style.DisabledAlpha);
     fprintf(f, "[WindowPadding]\n%1.3f %1.3f\n", style.WindowPadding.x,style.WindowPadding.y);
     fprintf(f, "[WindowRounding]\n%1.3f\n", style.WindowRounding);
     fprintf(f, "[WindowBorderSize]\n%1.3f\n", style.WindowBorderSize);
     fprintf(f, "[WindowMinSize]\n%1.3f %1.3f\n", style.WindowMinSize.x,style.WindowMinSize.y);
+    fprintf(f, "[WindowTitleAlign]\n%1.3f %1.3f\n", style.WindowTitleAlign.x,style.WindowTitleAlign.y);
     fprintf(f, "[WindowMenuButtonPosition]\n%d\n", style.WindowMenuButtonPosition);
+    //fprintf(f, "[WindowFillAlphaDefault]\n%1.3f\n", style.WindowFillAlphaDefault);
     fprintf(f, "[ChildRounding]\n%1.3f\n", style.ChildRounding);
     fprintf(f, "[ChildBorderSize]\n%1.3f\n", style.ChildBorderSize);
     fprintf(f, "[PopupRounding]\n%1.3f\n", style.PopupRounding);
@@ -81,23 +84,24 @@ bool SaveStyle(const char* filename,const ImGuiStyle& style)
     fprintf(f, "[FrameBorderSize]\n%1.3f\n", style.FrameBorderSize);
     fprintf(f, "[ItemSpacing]\n%1.3f %1.3f\n", style.ItemSpacing.x,style.ItemSpacing.y);
     fprintf(f, "[ItemInnerSpacing]\n%1.3f %1.3f\n", style.ItemInnerSpacing.x,style.ItemInnerSpacing.y);
+    fprintf(f, "[CellPadding]\n%1.3f %1.3f\n", style.CellPadding.x,style.CellPadding.y);
     fprintf(f, "[TouchExtraPadding]\n%1.3f %1.3f\n", style.TouchExtraPadding.x,style.TouchExtraPadding.y);
-    //fprintf(f, "[WindowFillAlphaDefault]\n%1.3f\n", style.WindowFillAlphaDefault);
-    fprintf(f, "[ScrollbarRounding]\n%1.3f\n", style.ScrollbarRounding);
-    fprintf(f, "[WindowTitleAlign]\n%1.3f %1.3f\n", style.WindowTitleAlign.x,style.WindowTitleAlign.y);
-    fprintf(f, "[ButtonTextAlign]\n%1.3f %1.3f\n", style.ButtonTextAlign.x,style.ButtonTextAlign.y);
     fprintf(f, "[IndentSpacing]\n%1.3f\n", style.IndentSpacing);
     fprintf(f, "[ColumnsMinSpacing]\n%1.3f\n", style.ColumnsMinSpacing);
     fprintf(f, "[ScrollbarSize]\n%1.3f\n", style.ScrollbarSize);
+    fprintf(f, "[ScrollbarRounding]\n%1.3f\n", style.ScrollbarRounding);
     fprintf(f, "[GrabMinSize]\n%1.3f\n", style.GrabMinSize);
     fprintf(f, "[GrabRounding]\n%1.3f\n", style.GrabRounding);
+    fprintf(f, "[LogSliderDeadzone]\n%1.3f\n", style.LogSliderDeadzone);
     fprintf(f, "[TabRounding]\n%1.3f\n", style.TabRounding);
     fprintf(f, "[TabBorderSize]\n%1.3f\n", style.TabBorderSize);
     fprintf(f, "[TabMinWidthForCloseButton]\n%1.3f",style.TabMinWidthForCloseButton);
     fprintf(f, "[ColorButtonPosition]\n%d\n", style.ColorButtonPosition);
+    fprintf(f, "[ButtonTextAlign]\n%1.3f %1.3f\n", style.ButtonTextAlign.x,style.ButtonTextAlign.y);
     fprintf(f, "[SelectableTextAlign]\n%1.3f %1.3f\n", style.SelectableTextAlign.x,style.SelectableTextAlign.y);
     fprintf(f, "[DisplayWindowPadding]\n%1.3f %1.3f\n", style.DisplayWindowPadding.x,style.DisplaySafeAreaPadding.y);
     fprintf(f, "[DisplaySafeAreaPadding]\n%1.3f %1.3f\n", style.DisplaySafeAreaPadding.x,style.DisplaySafeAreaPadding.y);
+    fprintf(f, "[MouseCursorScale]\n%1.3f\n", style.MouseCursorScale);
     fprintf(f, "[AntiAliasedLines]\n%d\n", style.AntiAliasedLines?1:0);
     fprintf(f, "[AntiAliasedLinesUseTex]\n%d\n", style.AntiAliasedLinesUseTex?1:0);
     fprintf(f, "[AntiAliasedFill]\n%d\n", style.AntiAliasedFill?1:0);
@@ -179,96 +183,100 @@ bool LoadStyle(const char* filename,ImGuiStyle& style)
 
             // parsing 'name' here by filling the fields above
             {
-		if      (strcmp(name, "Alpha")==0)			{npf=1;pf[0]=&style.Alpha;}
-		else if (strcmp(name, "WindowPadding")==0)		{npf=2;pf[0]=&style.WindowPadding.x;pf[1]=&style.WindowPadding.y;}
-		else if (strcmp(name, "WindowRounding")==0)		{npf=1;pf[0]=&style.WindowRounding;}
-		else if (strcmp(name, "WindowBorderSize")==0)		{npf=1;pf[0]=&style.WindowBorderSize;}
-		else if (strcmp(name, "WindowMinSize")==0)		{npf=2;pf[0]=&style.WindowMinSize.x;pf[1]=&style.WindowMinSize.y;}
+                if      (strcmp(name, "Alpha")==0)              {npf=1;pf[0]=&style.Alpha;}
+                else if (strcmp(name, "DisabledAlpha")==0)      {npf=1;pf[0]=&style.DisabledAlpha;}
+                else if (strcmp(name, "WindowPadding")==0)		{npf=2;pf[0]=&style.WindowPadding.x;pf[1]=&style.WindowPadding.y;}
+                else if (strcmp(name, "WindowRounding")==0)		{npf=1;pf[0]=&style.WindowRounding;}
+                else if (strcmp(name, "WindowBorderSize")==0)	{npf=1;pf[0]=&style.WindowBorderSize;}
+                else if (strcmp(name, "WindowMinSize")==0)		{npf=2;pf[0]=&style.WindowMinSize.x;pf[1]=&style.WindowMinSize.y;}
                 else if (strcmp(name, "WindowMenuButtonPosition")==0)   {npi=1;pi[0]=&style.WindowMenuButtonPosition;}
+                else if (strcmp(name, "WindowTitleAlign")==0)       {npf=2;pf[0]=&style.WindowTitleAlign.x;pf[1]=&style.WindowTitleAlign.y;}
+                else if (strcmp(name, "WindowFillAlphaDefault")==0) {npf=1;pf[0]=&WindowFillAlphaDefault;}  // For backward compatibility
                 else if (strcmp(name, "ChildRounding")==0 ||
-			 strcmp(name, "ChildWindowRounding")==0)	{npf=1;pf[0]=&style.ChildRounding;}
-		else if (strcmp(name, "ChildBorderSize")==0)		{npf=1;pf[0]=&style.ChildBorderSize;}
-		else if (strcmp(name, "PopupRounding")==0)		{npf=1;pf[0]=&style.PopupRounding;}
-		else if (strcmp(name, "PopupBorderSize")==0)		{npf=1;pf[0]=&style.PopupBorderSize;}
-		else if (strcmp(name, "FramePadding")==0)              {npf=2;pf[0]=&style.FramePadding.x;pf[1]=&style.FramePadding.y;}
-                else if (strcmp(name, "FrameRounding")==0)             {npf=1;pf[0]=&style.FrameRounding;}
-		else if (strcmp(name, "FrameBorderSize")==0)		{npf=1;pf[0]=&style.FrameBorderSize;}
-		else if (strcmp(name, "ItemSpacing")==0)               {npf=2;pf[0]=&style.ItemSpacing.x;pf[1]=&style.ItemSpacing.y;}
-                else if (strcmp(name, "ItemInnerSpacing")==0)          {npf=2;pf[0]=&style.ItemInnerSpacing.x;pf[1]=&style.ItemInnerSpacing.y;}
-		else if (strcmp(name, "IndentSpacing")==0)             {npf=1;pf[0]=&style.IndentSpacing;}
-		else if (strcmp(name, "TouchExtraPadding")==0)         {npf=2;pf[0]=&style.TouchExtraPadding.x;pf[1]=&style.TouchExtraPadding.y;}
-		else if (strcmp(name, "WindowFillAlphaDefault")==0)    {npf=1;pf[0]=&WindowFillAlphaDefault;}
-		else if (strcmp(name, "ScrollbarRounding")==0)         {npf=1;pf[0]=&style.ScrollbarRounding;}
-		else if (strcmp(name, "WindowTitleAlign")==0)          {npf=2;pf[0]=&style.WindowTitleAlign.x;pf[1]=&style.WindowTitleAlign.y;}
-		else if (strcmp(name, "ButtonTextAlign")==0)          {npf=2;pf[0]=&style.ButtonTextAlign.x;pf[1]=&style.ButtonTextAlign.y;}
-		else if (strcmp(name, "ColumnsMinSpacing")==0)         {npf=1;pf[0]=&style.ColumnsMinSpacing;}
-                else if (strcmp(name, "ScrollbarSize")==0)            {npf=1;pf[0]=&style.ScrollbarSize;}
-                else if (strcmp(name, "GrabMinSize")==0)               {npf=1;pf[0]=&style.GrabMinSize;}
-                else if (strcmp(name, "GrabRounding")==0)               {npf=1;pf[0]=&style.GrabRounding;}
-		else if (strcmp(name, "DisplayWindowPadding")==0)    {npf=2;pf[0]=&style.DisplayWindowPadding.x;pf[1]=&style.DisplayWindowPadding.y;}
-                else if (strcmp(name, "DisplaySafeAreaPadding")==0)    {npf=2;pf[0]=&style.DisplaySafeAreaPadding.x;pf[1]=&style.DisplaySafeAreaPadding.y;}
-                else if (strcmp(name, "AntiAliasedLines")==0)          {npb=1;pb[0]=&style.AntiAliasedLines;}
-                else if (strcmp(name, "AntiAliasedLinesUseTex")==0)    {npb=1;pb[0]=&style.AntiAliasedLinesUseTex;}
-                else if (strcmp(name, "AntiAliasedFill")==0 || strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedFill;}
-                else if (strcmp(name, "CurveTessellationTol")==0)               {npf=1;pf[0]=&style.CurveTessellationTol;}
-                //- 2021/02/17 (1.82) - renamed rarely used style.CircleSegmentMaxError (old default = 1.60f) to style.CircleTessellationMaxError (new default = 0.30f) as the meaning of the value changed.
-                else if (strcmp(name, "CircleTessellationMaxError")==0)               {npf=1;pf[0]=&style.CircleTessellationMaxError;}
-                else if (strcmp(name, "CircleSegmentMaxError")==0)               {npf=1;pf[0]=&CircleSegmentMaxError;}
-                else if (strcmp(name, "TabRounding")==0)         {npf=1;pf[0]=&style.TabRounding;}
-                else if (strcmp(name, "TabBorderSize")==0)         {npf=1;pf[0]=&style.TabBorderSize;}
+                         strcmp(name, "ChildWindowRounding")==0)	{npf=1;pf[0]=&style.ChildRounding;}
+                else if (strcmp(name, "ChildBorderSize")==0)		{npf=1;pf[0]=&style.ChildBorderSize;}
+                else if (strcmp(name, "PopupRounding")==0)          {npf=1;pf[0]=&style.PopupRounding;}
+                else if (strcmp(name, "PopupBorderSize")==0)		{npf=1;pf[0]=&style.PopupBorderSize;}
+                else if (strcmp(name, "FramePadding")==0)           {npf=2;pf[0]=&style.FramePadding.x;pf[1]=&style.FramePadding.y;}
+                else if (strcmp(name, "FrameRounding")==0)          {npf=1;pf[0]=&style.FrameRounding;}
+                else if (strcmp(name, "FrameBorderSize")==0)		{npf=1;pf[0]=&style.FrameBorderSize;}
+                else if (strcmp(name, "ItemSpacing")==0)            {npf=2;pf[0]=&style.ItemSpacing.x;pf[1]=&style.ItemSpacing.y;}
+                else if (strcmp(name, "ItemInnerSpacing")==0)       {npf=2;pf[0]=&style.ItemInnerSpacing.x;pf[1]=&style.ItemInnerSpacing.y;}
+                else if (strcmp(name, "CellPadding")==0)            {npf=2;pf[0]=&style.CellPadding.x;pf[1]=&style.CellPadding.y;}
+                else if (strcmp(name, "TouchExtraPadding")==0)      {npf=2;pf[0]=&style.TouchExtraPadding.x;pf[1]=&style.TouchExtraPadding.y;}
+                else if (strcmp(name, "IndentSpacing")==0)          {npf=1;pf[0]=&style.IndentSpacing;}
+                else if (strcmp(name, "ColumnsMinSpacing")==0)      {npf=1;pf[0]=&style.ColumnsMinSpacing;}
+                else if (strcmp(name, "ScrollbarSize")==0)          {npf=1;pf[0]=&style.ScrollbarSize;}
+                else if (strcmp(name, "ScrollbarRounding")==0)      {npf=1;pf[0]=&style.ScrollbarRounding;}
+                else if (strcmp(name, "GrabMinSize")==0)            {npf=1;pf[0]=&style.GrabMinSize;}
+                else if (strcmp(name, "GrabRounding")==0)           {npf=1;pf[0]=&style.GrabRounding;}
+                else if (strcmp(name, "LogSliderDeadzone")==0)      {npf=1;pf[0]=&style.LogSliderDeadzone;}
+                else if (strcmp(name, "TabRounding")==0)                {npf=1;pf[0]=&style.TabRounding;}
+                else if (strcmp(name, "TabBorderSize")==0)              {npf=1;pf[0]=&style.TabBorderSize;}
                 else if (strcmp(name, "TabMinWidthForUnselectedCloseButton")==0 ||
-                         strcmp(name, "TabMinWidthForCloseButton")==0)    {npf=1;pf[0]=&style.TabMinWidthForCloseButton;}
-                else if (strcmp(name, "ColorButtonPosition")==0)   {npi=1;pi[0]=&style.ColorButtonPosition;}
-                else if (strcmp(name, "SelectableTextAlign")==0)   {npf=2;pf[0]=&style.SelectableTextAlign.x;pf[1]=&style.SelectableTextAlign.y;}
+                         strcmp(name, "TabMinWidthForCloseButton")==0)  {npf=1;pf[0]=&style.TabMinWidthForCloseButton;}
+                else if (strcmp(name, "ColorButtonPosition")==0)        {npi=1;pi[0]=&style.ColorButtonPosition;}
+                else if (strcmp(name, "ButtonTextAlign")==0)        {npf=2;pf[0]=&style.ButtonTextAlign.x;pf[1]=&style.ButtonTextAlign.y;}
+                else if (strcmp(name, "SelectableTextAlign")==0)        {npf=2;pf[0]=&style.SelectableTextAlign.x;pf[1]=&style.SelectableTextAlign.y;}
+                else if (strcmp(name, "DisplayWindowPadding")==0)   {npf=2;pf[0]=&style.DisplayWindowPadding.x;pf[1]=&style.DisplayWindowPadding.y;}
+                else if (strcmp(name, "DisplaySafeAreaPadding")==0) {npf=2;pf[0]=&style.DisplaySafeAreaPadding.x;pf[1]=&style.DisplaySafeAreaPadding.y;}
+                else if (strcmp(name, "MouseCursorScale")==0)       {npf=1;pf[0]=&style.MouseCursorScale;}
+                else if (strcmp(name, "AntiAliasedLines")==0)       {npb=1;pb[0]=&style.AntiAliasedLines;}
+                else if (strcmp(name, "AntiAliasedLinesUseTex")==0) {npb=1;pb[0]=&style.AntiAliasedLinesUseTex;}
+                else if (strcmp(name, "AntiAliasedFill")==0 || strcmp(name, "AntiAliasedShapes")==0)          {npb=1;pb[0]=&style.AntiAliasedFill;}
+                else if (strcmp(name, "CurveTessellationTol")==0)   {npf=1;pf[0]=&style.CurveTessellationTol;}
+                //- 2021/02/17 (1.82) - renamed rarely used style.CircleSegmentMaxError (old default = 1.60f) to style.CircleTessellationMaxError (new default = 0.30f) as the meaning of the value changed.
+                else if (strcmp(name, "CircleTessellationMaxError")==0) {npf=1;pf[0]=&style.CircleTessellationMaxError;}
+                else if (strcmp(name, "CircleSegmentMaxError")==0)      {npf=1;pf[0]=&CircleSegmentMaxError;}
                 // all the colors here
                 else {
                     for (int j=0;j<ImGuiCol_COUNT;j++)    {
-			if (strcmp(name,ImGui::GetStyleColorName(j))==0)    {
+                        if (strcmp(name,ImGui::GetStyleColorName(j))==0)    {
                             npf = 4;
                             ImVec4& color = style.Colors[j];
                             pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
                             break;
                         }
-			// Fallback for old files -----------------------------------
-			else if (strcmp(name,"TooltipBg")==0)	{
-			    npf = 4;
-			    ImVec4& color = style.Colors[ImGuiCol_PopupBg];
-			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
-			    break;
-			}
-			else if (strcmp(name,"Column")==0)	{
-			    npf = 4;
-			    ImVec4& color = style.Colors[ImGuiCol_Separator];
-			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
-			    break;
-			}
-			else if (strcmp(name,"ColumnActive")==0)	{
-			    npf = 4;
-			    ImVec4& color = style.Colors[ImGuiCol_SeparatorActive];
-			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
-			    break;
-			}
-			else if (strcmp(name,"ModalWindowDarkening")==0)	{
-			    npf = 4;
-			    ImVec4& color = style.Colors[ImGuiCol_ModalWindowDimBg];
-			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
-			    break;
-			}
-			else if (strcmp(name,"ColumnHovered")==0)	{
-			    npf = 4;
-			    ImVec4& color = style.Colors[ImGuiCol_SeparatorHovered];
-			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
-			    break;
-			}
-			/* // ImGuiCol_ComboBg has been removed in favour of ImGuiCol_PopupBg.
-			   // So it's better not to use the serilized ImGuiCol_ComboBg anymore
-			  else if (strcmp(name,"ComboBg")==0)	{
-			    npf = 4;
-			    ImVec4& color = style.Colors[ImGuiCol_PopupBg];
-			    pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
-			    break;
-			}*/
-			// -----------------------------------------------------------
+                        // Fallback for old files -----------------------------------
+                        else if (strcmp(name,"TooltipBg")==0)	{
+                            npf = 4;
+                            ImVec4& color = style.Colors[ImGuiCol_PopupBg];
+                            pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+                            break;
+                        }
+                        else if (strcmp(name,"Column")==0)	{
+                            npf = 4;
+                            ImVec4& color = style.Colors[ImGuiCol_Separator];
+                            pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+                            break;
+                        }
+                        else if (strcmp(name,"ColumnActive")==0)	{
+                            npf = 4;
+                            ImVec4& color = style.Colors[ImGuiCol_SeparatorActive];
+                            pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+                            break;
+                        }
+                        else if (strcmp(name,"ModalWindowDarkening")==0)	{
+                            npf = 4;
+                            ImVec4& color = style.Colors[ImGuiCol_ModalWindowDimBg];
+                            pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+                            break;
+                        }
+                        else if (strcmp(name,"ColumnHovered")==0)	{
+                            npf = 4;
+                            ImVec4& color = style.Colors[ImGuiCol_SeparatorHovered];
+                            pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+                            break;
+                        }
+                        /* // ImGuiCol_ComboBg has been removed in favour of ImGuiCol_PopupBg.
+                        // So it's better not to use the serilized ImGuiCol_ComboBg anymore
+                        else if (strcmp(name,"ComboBg")==0)	{
+                            npf = 4;
+                            ImVec4& color = style.Colors[ImGuiCol_PopupBg];
+                            pf[0]=&color.x;pf[1]=&color.y;pf[2]=&color.z;pf[3]=&color.w;
+                            break;
+                        }*/
+                        // -----------------------------------------------------------
                     }
                 }
             }
@@ -2322,13 +2330,111 @@ bool ResetStyle(int styleEnum,ImGuiStyle& style) {
 #       endif
     }
     break;
+    case ImGuiStyle_DeepDark:
+    case ImGuiStyle_DeepDarkInverse: {
+        // Posted by @janekb04 here: https://github.com/ocornut/imgui/issues/707 (hope I can use it)
+        // @janekb04 used Roboto-Regular.ttf font (at 16px) with it (Roboto-Medium.ttf is in imgui/misc/font directory)
+
+        // @janekb04 wrote: Note that I didn't set a few values because I didn't have to yet. Those are set to pure red to easily notice that they have to be modified.
+
+        ImGuiStyle& style = ImGui::GetStyle();
+
+        style.WindowPadding                     = ImVec2(8.00f, 8.00f);
+        style.FramePadding                      = ImVec2(5.00f, 2.00f);
+        style.CellPadding                       = ImVec2(6.00f, 6.00f);
+        style.ItemSpacing                       = ImVec2(6.00f, 6.00f);
+        style.ItemInnerSpacing                  = ImVec2(6.00f, 6.00f);
+        style.TouchExtraPadding                 = ImVec2(0.00f, 0.00f);
+        style.IndentSpacing                     = 25;
+        style.ScrollbarSize                     = 15;
+        style.GrabMinSize                       = 10;
+        style.WindowBorderSize                  = 1;
+        style.ChildBorderSize                   = 1;
+        style.PopupBorderSize                   = 1;
+        style.FrameBorderSize                   = 1;
+        style.TabBorderSize                     = 1;
+        style.WindowRounding                    = 7;
+        style.ChildRounding                     = 4;
+        style.FrameRounding                     = 3;
+        style.PopupRounding                     = 4;
+        style.ScrollbarRounding                 = 9;
+        style.GrabRounding                      = 3;
+        style.LogSliderDeadzone                 = 4;
+        style.TabRounding                       = 4;
+
+        ImVec4* colors = style.Colors;
+
+        colors[ImGuiCol_Text]                   = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+        colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+        colors[ImGuiCol_WindowBg]               = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+        colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        colors[ImGuiCol_PopupBg]                = ImVec4(0.19f, 0.19f, 0.19f, 0.92f);
+        colors[ImGuiCol_Border]                 = ImVec4(0.19f, 0.19f, 0.19f, 0.29f);
+        colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.24f);
+        colors[ImGuiCol_FrameBg]                = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+        colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
+        colors[ImGuiCol_FrameBgActive]          = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+        colors[ImGuiCol_TitleBg]                = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+        colors[ImGuiCol_TitleBgActive]          = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+        colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+        colors[ImGuiCol_MenuBarBg]              = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+        colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+        colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
+        colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.40f, 0.54f);
+        colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
+        colors[ImGuiCol_CheckMark]              = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
+        colors[ImGuiCol_SliderGrab]             = ImVec4(0.34f, 0.34f, 0.34f, 0.54f);
+        colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.56f, 0.56f, 0.56f, 0.54f);
+        colors[ImGuiCol_Button]                 = ImVec4(0.05f, 0.05f, 0.05f, 0.54f);
+        colors[ImGuiCol_ButtonHovered]          = ImVec4(0.19f, 0.19f, 0.19f, 0.54f);
+        colors[ImGuiCol_ButtonActive]           = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+        colors[ImGuiCol_Header]                 = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+        colors[ImGuiCol_HeaderHovered]          = ImVec4(0.00f, 0.00f, 0.00f, 0.36f);
+        colors[ImGuiCol_HeaderActive]           = ImVec4(0.20f, 0.22f, 0.23f, 0.33f);
+        colors[ImGuiCol_Separator]              = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
+        colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
+        colors[ImGuiCol_SeparatorActive]        = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
+        colors[ImGuiCol_ResizeGrip]             = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
+        colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.44f, 0.44f, 0.44f, 0.29f);
+        colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
+        colors[ImGuiCol_Tab]                    = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+        colors[ImGuiCol_TabHovered]             = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+        colors[ImGuiCol_TabActive]              = ImVec4(0.20f, 0.20f, 0.20f, 0.36f);
+        colors[ImGuiCol_TabUnfocused]           = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+        colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+        colors[ImGuiCol_PlotLines]              = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+        colors[ImGuiCol_PlotLinesHovered]       = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+        colors[ImGuiCol_PlotHistogram]          = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+        colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+        colors[ImGuiCol_TableHeaderBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+        colors[ImGuiCol_TableBorderStrong]      = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+        colors[ImGuiCol_TableBorderLight]       = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
+        colors[ImGuiCol_TableRowBg]             = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        colors[ImGuiCol_TableRowBgAlt]          = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+        colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+        colors[ImGuiCol_DragDropTarget]         = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
+        colors[ImGuiCol_NavHighlight]           = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+        colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 0.00f, 0.00f, 0.70f);
+        colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(1.00f, 0.00f, 0.00f, 0.20f);
+        colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(1.00f, 0.00f, 0.00f, 0.35f);
+
+#       ifdef IMGUI_HAS_DOCK
+        colors[ImGuiCol_DockingPreview]         = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
+        colors[ImGuiCol_DockingEmptyBg]         = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
+#       endif
+
+        if (styleEnum == ImGuiStyle_DeepDarkInverse) {
+            InvertStyleColors(style);
+        }
+    }
+    break;
     default:
     break;
     } 
 
     return true;
 }
-static const char* DefaultStyleNames[ImGuiStyle_Count]={"DefaultClassic","DefaultDark","DefaultLight","Gray","Light","BlackCodz01","DarkCodz01","GrayCodz01","Purple","Cherry","DarkOpaque","Soft","EdinBlack","EdinWhite","Maya","LightGreen","Design","Dracula","Greenish","C64","PhotoStore","CorporateGreyFlat","CorporateGreyFramed","VisualDark","SteamingLife","SoftLife","GoldenBlack","Windowed","OverShiftedBlack","AieKickGreenBlue","AieKickRedDark","DarkOpaqueInverse","GrayCodz01Inverse","PurpleInverse","LightGreenInverse","DesignInverse"};
+static const char* DefaultStyleNames[ImGuiStyle_Count]={"DefaultClassic","DefaultDark","DefaultLight","Gray","Light","BlackCodz01","DarkCodz01","GrayCodz01","Purple","Cherry","DarkOpaque","Soft","EdinBlack","EdinWhite","Maya","LightGreen","Design","Dracula","Greenish","C64","PhotoStore","CorporateGreyFlat","CorporateGreyFramed","VisualDark","SteamingLife","SoftLife","GoldenBlack","Windowed","OverShiftedBlack","AieKickGreenBlue","AieKickRedDark","DeepDark","DarkOpaqueInverse","GrayCodz01Inverse","PurpleInverse","LightGreenInverse","DesignInverse","DeepDarkInverse"};
 const char** GetDefaultStyleNames() {return &DefaultStyleNames[0];}
 
 } // namespace ImGui

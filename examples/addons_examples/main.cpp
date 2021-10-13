@@ -464,6 +464,8 @@ void DrawGL()	// Mandatory
             else if (styleEnumNum==ImGuiStyle_OverShiftedBlack) ImGui::SetTooltip("%s","\"OverShiftedBlack\"\nPosted by @OverShifted here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_AieKickGreenBlue) ImGui::SetTooltip("%s","\"AieKickGreenBlue\"\nPosted by @aiekick here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
             else if (styleEnumNum==ImGuiStyle_AieKickRedDark) ImGui::SetTooltip("%s","\"AieKickRedDark\"\nPosted by @aiekick here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
+            else if (styleEnumNum==ImGuiStyle_DeepDark) ImGui::SetTooltip("%s","\"DeepDark\"\nPosted by @janekb04 here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
+
         }
 
         ImGui::SameLine();
@@ -678,7 +680,7 @@ void DrawGL()	// Mandatory
         ImGui::Text("Choose a date:");
         ImGui::SameLine();
         static tm myDate={};       // IMPORTANT: must be static! (plenty of compiler warnings here if we write: static tm myDate={0}; Is there any difference?)
-        ImGui::SetNextItemWidth(ImGui::GetWindowContentRegionWidth()*0.5f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.5f);
         if (ImGui::DateChooser("Date Chooser##MyDateChooser",myDate,"%d/%m/%Y")) {
             // A new date has been chosen
             //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
@@ -690,7 +692,7 @@ void DrawGL()	// Mandatory
         ImGui::Text("Choose another date:");
         ImGui::SameLine();
         static tm myDate2={};       // IMPORTANT: must be static! (plenty of compiler warnings here if we write: static tm myDate={0}; Is there any difference?)
-        ImGui::SetNextItemWidth(ImGui::GetWindowContentRegionWidth()*0.5f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.5f);
         if (ImGui::DateChooser("##MyDateChooser2",myDate2,"%d/%m/%Y")) {
             // A new date has been chosen
             //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate2.tm_mday,myDate2.tm_mon+1,myDate2.tm_year+1900);

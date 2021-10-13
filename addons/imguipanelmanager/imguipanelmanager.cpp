@@ -147,12 +147,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
     // Add to stack
     // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
+    g.CurrentWindow = window;
     ImGuiWindowStackData window_stack_data;
     window_stack_data.Window = window;
     window_stack_data.ParentLastItemDataBackup = g.LastItemData;
+    window_stack_data.StackSizesOnBegin.SetToCurrentState();
     g.CurrentWindowStack.push_back(window_stack_data);
-    g.CurrentWindow = window;
-    window->DC.StackSizesOnBegin.SetToCurrentState();
     g.CurrentWindow = NULL;
 
     if (flags & ImGuiWindowFlags_Popup)
@@ -991,10 +991,10 @@ static void DockWindowEnd()
 
     // Pop from window stack
     g.LastItemData = g.CurrentWindowStack.back().ParentLastItemDataBackup;
-    g.CurrentWindowStack.pop_back();
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
-    window->DC.StackSizesOnBegin.CompareWithCurrentState();
+    g.CurrentWindowStack.back().StackSizesOnBegin.CompareWithCurrentState();
+    g.CurrentWindowStack.pop_back();
     SetCurrentWindow(g.CurrentWindowStack.Size == 0 ? NULL : g.CurrentWindowStack.back().Window);
 }
 

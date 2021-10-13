@@ -3441,7 +3441,7 @@ bool BeginTimeline(const char* str_id, float max_value, int num_visible_rows, in
     const bool rv = BeginChild(str_id,ImVec2(0,num_visible_rows>=0 ? (row_height*num_visible_rows) : (ImGui::GetContentRegionAvail().y-row_height)),false);
     ImGui::PushStyleColor(ImGuiCol_Separator,GImGui->Style.Colors[ImGuiCol_Border]);
     ImGui::Columns(2,str_id);
-    const float contentRegionWidth = ImGui::GetWindowContentRegionWidth();
+    const float contentRegionWidth = ImGui::GetWindowContentRegionMax().x-ImGui::GetWindowContentRegionMin().x; // ImGui::GetContentRegionAvail().x ?
     if (ImGui::GetColumnOffset(1)>=contentRegionWidth*0.48f) ImGui::SetColumnOffset(1,contentRegionWidth*0.15f);
     s_max_timeline_value = max_value>=0 ? max_value : (contentRegionWidth*0.85f);
     if (opt_exact_num_rows>0) {

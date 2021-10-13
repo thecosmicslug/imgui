@@ -290,6 +290,8 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
                 else if (styleEnumNum==ImGuiStyle_OverShiftedBlack) ImGui::SetTooltip("%s","\"OverShiftedBlack\"\nPosted by @OverShifted here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_AieKickGreenBlue) ImGui::SetTooltip("%s","\"AieKickGreenBlue\"\nPosted by @aiekick here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
                 else if (styleEnumNum==ImGuiStyle_AieKickRedDark) ImGui::SetTooltip("%s","\"AieKickRedDark\"\nPosted by @aiekick here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
+                else if (styleEnumNum==ImGuiStyle_DeepDark) ImGui::SetTooltip("%s","\"DeepDark\"\nPosted by @janekb04 here:\nhttps://github.com/ocornut/imgui/issues/707\n(hope I can use it)");
+
             }
             ImGui::Spacing();ImGui::Separator();ImGui::Spacing();
 #           endif // IMGUISTYLESERIALIZER_H_

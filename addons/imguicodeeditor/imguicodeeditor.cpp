@@ -2707,7 +2707,10 @@ void CodeEditor::TextLineUnformattedWithSH(const char* text, const char* text_en
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems) return;
 
-    IM_ASSERT(text != NULL);
+    // Accept null ranges
+    if (text == text_end) text = text_end = "";
+
+    // Calculate length
     const char* text_begin = text;
     if (text_end == NULL) text_end = text + strlen(text); // FIXME-OPT
 
@@ -3434,7 +3437,10 @@ static void MyTextLineUnformattedWithSH(const BadCodeEditorData& ceData,const ch
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems) return;
 
-    IM_ASSERT(text != NULL);
+    // Accept null ranges
+    if (text == text_end) text = text_end = "";
+
+    // Calculate length
     const char* text_begin = text;
     if (text_end == NULL) text_end = text + strlen(text); // FIXME-OPT
 
@@ -3864,15 +3870,16 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     const bool is_ctrl_down = io.KeyCtrl;
     const bool is_shift_down = io.KeyShift;
     const bool is_alt_down = io.KeyAlt;
-    const bool focus_requested_by_code = (item_status_flags & ImGuiItemStatusFlags_FocusedByCode) != 0;
-    const bool focus_requested_by_tabbing = (item_status_flags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
+
+    const bool input_requested_by_tabbing = (item_status_flags & ImGuiItemStatusFlags_FocusedByTabbing) != 0;
+    const bool input_requested_by_nav = (g.ActiveId != id) && ((g.NavActivateInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_Keyboard));
 
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_Keyboard));
+    const bool user_nav_input_start = (g.ActiveId != id) && (g.NavActivateInputId == id || g.NavActivateId == id);
     const bool user_scroll_finish = state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
-    const bool user_scroll_active = state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
+    //const bool user_scroll_active = state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
 
-    const bool init_make_active = (user_clicked || user_scroll_finish || user_nav_input_start || focus_requested_by_code || focus_requested_by_tabbing);
+    const bool init_make_active = (user_clicked || user_scroll_finish || input_requested_by_nav || input_requested_by_tabbing);
 
     bool clear_active_id = false;
     bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0  || user_nav_input_start);
@@ -3937,8 +3944,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         if (is_readonly && !g.ActiveIdIsJustActivated)
         {
             // When read-only we always use the live data passed to the function
-            state->TextW.resize(buf_size+1);
             const char* buf_end = NULL;
+            state->TextW.resize(buf_size+1);
             state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, state->TextW.Size, buf, NULL, &buf_end);
             state->CurLenA = (int)(buf_end - buf);
             state->CursorClamp();
@@ -4028,6 +4035,11 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         const bool is_copy  = ((is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_C)) || (is_ctrl_key_only  && IsKeyPressedMap(ImGuiKey_Insert))) && state->HasSelection();
         const bool is_paste = ((is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_V)) || (is_shift_key_only && IsKeyPressedMap(ImGuiKey_Insert))) && !is_readonly;
 
+        // We allow validate/cancel with Nav source (gamepad) to makes it easier to undo an accidental NavInput press with no keyboard wired, but otherwise it isn't very useful.
+        const bool is_validate_enter = IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_KeyPadEnter);
+        const bool is_validate_nav = (IsNavInputTest(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed) && !IsKeyPressedMap(ImGuiKey_Space)) || IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed);
+        const bool is_cancel   = IsKeyPressedMap(ImGuiKey_Escape) || IsNavInputTest(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed);
+
         if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINEEND : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT : STB_TEXTEDIT_K_RIGHT) | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_UpArrow))                     { if (io.KeyCtrl) SetScrollY(draw_window, ImMax(draw_window->Scroll.y - g.FontSize, 0.0f)); else state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTSTART : STB_TEXTEDIT_K_UP) | k_mask); }
@@ -4058,7 +4070,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             }
             state->OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
         }
-        else if (IsKeyPressedMap(ImGuiKey_Enter))
+        else if (is_validate_enter)
         {
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
             if ((ctrl_enter_for_new_line && !is_ctrl_down) || (!ctrl_enter_for_new_line && is_ctrl_down))
@@ -4098,7 +4110,12 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                 state->OnKeyPressed((int)c);
         }
-        else if (IsKeyPressedMap(ImGuiKey_Escape))                              { clear_active_id = cancel_edit = true; }
+        else if (is_validate_nav)
+        {
+            IM_ASSERT(!is_validate_enter);
+            enter_pressed = clear_active_id = true;
+        }
+        else if (is_cancel)                              { clear_active_id = cancel_edit = true; }
         else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_Z) && !is_readonly && is_undoable)    { state->OnKeyPressed(STB_TEXTEDIT_K_UNDO); state->ClearSelection(); }
         else if (((is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_Y)) || (is_shortcut_key_with_shift && IsKeyPressedMap(ImGuiKey_Z))) && !is_readonly && is_undoable)    { state->OnKeyPressed(STB_TEXTEDIT_K_REDO); state->ClearSelection(); }
         else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_A))                   { state->SelectAll(); state->CursorFollow = true; }
