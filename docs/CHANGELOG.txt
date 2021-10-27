@@ -31,6 +31,28 @@ HOW TO UPDATE?
 - Please report any issue!
 
 -----------------------------------------------------------------------
+ VERSION 1.86 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
+- Added IsMouseTripleClicked() function. Tracking multi-click count in IO structure. (#3229) [@kudaba]
+- Modals: fixed issue hovering popups inside a child inside a modal. (#4676, #4527)
+- Fixed IsWindowFocused()/IsWindowHovered() issues with childs inside popups. (#4676)
+- Nav: fixed absolute mouse position (with NavEnableSetMousePos config flag) when using Home/End
+  leads to scrolling.
+- InputText: made double-click select word, triple-line select line. Word delimitation logic differs
+  slightly from the one used by CTRL+arrows. (#2244)
+- Backends: Vulkan: Call vkCmdSetScissor() at the end of render with a full-viewport to reduce
+  likehood of issues with people using VK_DYNAMIC_STATE_SCISSOR in their app without calling
+  vkCmdSetScissor() explicitly every frame. (#4644)
+- Misc: Fix MinGW DLL build issue (when IMGUI_API is defined). [@rokups]
+- CI: Add MinGW DLL build to test suite. [@rokups]
+
+
+-----------------------------------------------------------------------
  VERSION 1.85 (Released 2021-10-12)
 -----------------------------------------------------------------------
 
