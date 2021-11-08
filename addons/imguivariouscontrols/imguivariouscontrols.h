@@ -913,4 +913,20 @@ void LoadingIndicatorCircle2(const char* label, float indicatorRadiusFactor=1.f,
 
 } // namespace ImGui
 
+
+namespace ImGui {
+// PieMenu code based code posted by @thennequin here:
+// https://gist.github.com/thennequin/64b4b996ec990c6ddc13a48c6a0ba68c
+// Hope we can use it...
+    namespace Pie   {
+    /* Declaration */
+    IMGUI_API bool BeginPopup( const char* pName, int iMouseButton = 0 );
+    IMGUI_API void EndPopup();
+
+    IMGUI_API bool MenuItem( const char* pName);    //, bool bEnabled = true );
+    IMGUI_API bool BeginMenu( const char* pName);   //, bool bEnabled = true );
+    IMGUI_API void EndMenu();
+
+    }   // namespace Pie
+} // namespace ImGui
 #endif

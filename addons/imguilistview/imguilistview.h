@@ -552,6 +552,7 @@ private:
 
        return buf;
     }
+    IMGUI_API static void CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end);
 
 public:
     // main method.

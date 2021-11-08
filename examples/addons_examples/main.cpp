@@ -916,6 +916,7 @@ void DrawGL()	// Mandatory
                     current_item = 2;
                 }
 
+                //ImGui::SetNextItemWidth(150.f);
                 if (ImGui::InputComboWithAutoCompletion("Colors##AutoCompleteIT",&current_item,bufferSize,&bufData,
                     TMP::ItemGetter,TMP::ItemInserter,TMP::ItemDeleter,TMP::ItemRenamer,   // TMP::ItemDeleter and TMP::ItemRenemer can be NULL
                     autocompletionEntries.size(),(void*)&autocompletionEntries))    {
@@ -1363,6 +1364,54 @@ void DrawGL()	// Mandatory
         ImGui::AlignTextToFramePadding();ImGui::TextUnformatted("Test 4:");ImGui::SameLine();ImGui::LoadingIndicatorCircle2("MyLIC24",4.0f,1.f,&ImGui::GetStyle().Colors[ImGuiCol_Header]);
         // No idea why AlignFirstTextHeightToWidgets() does not work...
 
+
+        // Pie Menu. based on code posted by @thennequin here:
+        // https://gist.github.com/thennequin/64b4b996ec990c6ddc13a48c6a0ba68c
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("Pie Menu (by @thennequin: hope we can use it)");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Based on code posted by @thennequin here:\nhttps://gist.github.com/thennequin/64b4b996ec990c6ddc13a48c6a0ba68c");
+        ImGui::Separator();
+        // trigger logic and output
+        const int pieMenuMouseButtonTrigger = ImGuiMouseButton_Right;    // Tweakable
+        ImGui::Text("Right-click this text for a Pie Menu!");
+        const bool pieMenuTriggered = ImGui::IsItemHovered() && ImGui::IsMouseClicked(pieMenuMouseButtonTrigger);
+        if (pieMenuTriggered)   ImGui::OpenPopup("PieMenu");
+
+        // example usage
+        static const char* pieSelected = NULL;  // used to display output
+        if (ImGui::Pie::BeginPopup("PieMenu",pieMenuMouseButtonTrigger))    {
+            pieSelected = "";
+            if (ImGui::Pie::MenuItem("Test1")) {pieSelected="Test1";}
+            if (ImGui::Pie::MenuItem("Test2")) {pieSelected="Test2";}
+            if (ImGui::Pie::MenuItem("Test3")) {pieSelected="Test3";}
+            if (ImGui::Pie::BeginMenu("Sub"))    {
+                if (ImGui::Pie::BeginMenu("Sub sub\nmenu")) {
+                    if (ImGui::Pie::MenuItem("SubSub")) {pieSelected="SubSub";}
+                    if (ImGui::Pie::MenuItem("SubSub2")) {pieSelected="SubSub2";}
+                    ImGui::Pie::EndMenu();
+                }
+                if (ImGui::Pie::MenuItem("TestSub")) {pieSelected="TestSub";}
+                if (ImGui::Pie::MenuItem("TestSub2")) {pieSelected="TestSub2";}
+                ImGui::Pie::EndMenu();
+            }
+            if (ImGui::Pie::BeginMenu("Sub2"))   {
+                if (ImGui::Pie::MenuItem("TestSub")) {pieSelected="TestSub";}
+                if (ImGui::Pie::BeginMenu("Sub sub\nmenu"))  {
+                    if (ImGui::Pie::MenuItem("SubSub")) {pieSelected="SubSub";}
+                    if (ImGui::Pie::MenuItem("SubSub2")) {pieSelected="SubSub2";}
+                    ImGui::Pie::EndMenu();
+                }
+                if (ImGui::Pie::MenuItem("TestSub2")) {pieSelected="TestSub2";}
+                ImGui::Pie::EndMenu();
+            }
+            ImGui::Pie::EndPopup();
+        }
+        if (pieSelected)    {
+            //ImGui::SameLine();
+            ImGui::Text("Last selected pie menu item: %s",strlen(pieSelected)==0?"NONE":pieSelected);
+            // This does not work! So I guess there's no way to detect which item has been chosen!
+        }
 
 #       else //NO_IMGUIVARIOUSCONTROLS
             ImGui::Text("%s","Excluded from this build.\n");

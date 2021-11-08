@@ -632,6 +632,43 @@ bool CodeEditor::Style::Load(CodeEditor::Style &style, ImGuiHelper::Deserializer
 #endif //NO_IMGUIHELPER_SERIALIZATION_LOAD
 #endif //NO_IMGUIHELPER_SERIALIZATION
 
+// ImGui::CalculateListClipping() is now deprecated, and this fallback function is provided (somewhere in Dear ImGui source):
+// ================================================================================================
+// Legacy helper to calculate coarse clipping of large list of evenly sized items.
+// This legacy API is not ideal because it assume we will return a single contiguous rectangle.
+// Prefer using ImGuiListClipper which can returns non-contiguous ranges.
+void CodeEditor::CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end)    {
+    ImGuiContext& g = *GImGui;ImGuiWindow* window = g.CurrentWindow;
+    if (g.LogEnabled)   {
+        // If logging is active, do not perform any clipping
+        *out_items_display_start = 0;
+        *out_items_display_end = items_count;
+        return;
+    }
+    if (GetSkipItemForListClipping())   {
+        *out_items_display_start = *out_items_display_end = 0;
+        return;
+    }
+    // We create the union of the ClipRect and the scoring rect which at worst should be 1 page away from ClipRect
+    // We don't include g.NavId's rectangle in there (unless g.NavJustMovedToId is set) because the rectangle enlargement can get costly.
+    ImRect rect = window->ClipRect;
+    if (g.NavMoveScoringItems)  rect.Add(g.NavScoringNoClipRect);
+    if (g.NavJustMovedToId && window->NavLastIds[0] == g.NavJustMovedToId)  rect.Add(ImGui::WindowRectRelToAbs(window, window->NavRectRel[0])); // Could store and use NavJustMovedToRectRel
+    const ImVec2 pos = window->DC.CursorPos;
+    int start = (int)((rect.Min.y - pos.y) / items_height);
+    int end = (int)((rect.Max.y - pos.y) / items_height);
+    // When performing a navigation request, ensure we have one item extra in the direction we are moving to
+    if (g.NavMoveScoringItems && g.NavMoveClipDir == ImGuiDir_Up)   start--;
+    if (g.NavMoveScoringItems && g.NavMoveClipDir == ImGuiDir_Down) end++;
+    start = ImClamp(start, 0, items_count);
+    end = ImClamp(end + 1, start, items_count);
+    *out_items_display_start = start;
+    *out_items_display_end = end;
+}
+// =================================================================================================
+// (P.S. of course I got no idea/time to figure out how to correctly replace this function...)
+
+
 
 const ImFont* CodeEditor::ImFonts[FONT_STYLE_COUNT] = {NULL,NULL,NULL,NULL};
 
@@ -2119,6 +2156,7 @@ static Line* gCurline;
 static bool gIsCurlineHovered;
 static bool gIsCursorChanged;
 
+
 // Main method
 void CodeEditor::render()   {
     if (lines.size()==0) return;
@@ -2301,7 +2339,7 @@ void CodeEditor::render()   {
 
     const float lineHeight = ImGui::GetTextLineHeight();    // This is the font size too
     int lineStart,lineEnd;
-    ImGui::CalcListClipping(lines.size(),lineHeight, &lineStart, &lineEnd);
+    CalcListClipping(lines.size(),lineHeight, &lineStart, &lineEnd);
     // Ensure that lineStart is not hidden
     while (lineStart<lines.size()-1 && lineStart>0 && (lines[lineStart]->isHidden() || (lines[lineStart]->canFoldingBeMergedWithLineAbove() && lines[lineStart]->isFolded()))) {
         if (io.MouseWheel>=0) {--lineStart;/*--lineEnd;*/}
@@ -3971,19 +4009,49 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         const bool is_osx = io.ConfigMacOSXBehaviors;
 
         const bool osx_double_click_selects_words = io.ConfigMacOSXBehaviors;      // OS X style: Double click selects by word instead of selecting whole text
-        if (select_all || (hovered && !is_osx && io.MouseDoubleClicked[0]))
+        if (select_all)
         {
             state->SelectAll();
             state->SelectedAllMouseLock = true;
         }
-        else if (hovered && osx_double_click_selects_words && io.MouseDoubleClicked[0])
+        else if (hovered && io.MouseClickedCount[0] >= 2 && !io.KeyShift)
         {
-            // Select a word only, OS X style (by simulating keystrokes)
-            state->OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT);
-            state->OnKeyPressed(STB_TEXTEDIT_K_WORDRIGHT | STB_TEXTEDIT_K_SHIFT);
+            stb_textedit_click(state, &state->Stb, mouse_x, mouse_y);
+            const int multiclick_count = (io.MouseClickedCount[0] - 2);
+            if ((multiclick_count % 2) == 0)
+            {
+                // Double-click: Select word
+                // We always use the "Mac" word advance for double-click select vs CTRL+Right which use the platform dependent variant:
+                // FIXME: There are likely many ways to improve this behavior, but there's no "right" behavior (depends on use-case, software, OS)
+                const bool is_bol = (state->Stb.cursor == 0) || ImStb::STB_TEXTEDIT_GETCHAR(state, state->Stb.cursor - 1) == '\n';
+                if (STB_TEXT_HAS_SELECTION(&state->Stb) || !is_bol)
+                    state->OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT);
+                //state->OnKeyPressed(STB_TEXTEDIT_K_WORDRIGHT | STB_TEXTEDIT_K_SHIFT);
+                if (!STB_TEXT_HAS_SELECTION(&state->Stb))
+                    ImStb::stb_textedit_prep_selection_at_cursor(&state->Stb);
+                state->Stb.cursor = ImStb::STB_TEXTEDIT_MOVEWORDRIGHT_MAC(state, state->Stb.cursor);
+                state->Stb.select_end = state->Stb.cursor;
+                ImStb::stb_textedit_clamp(state, &state->Stb);
+            }
+            else
+            {
+                // Triple-click: Select line
+                const bool is_eol = ImStb::STB_TEXTEDIT_GETCHAR(state, state->Stb.cursor) == '\n';
+                state->OnKeyPressed(STB_TEXTEDIT_K_LINESTART);
+                state->OnKeyPressed(STB_TEXTEDIT_K_LINEEND | STB_TEXTEDIT_K_SHIFT);
+                state->OnKeyPressed(STB_TEXTEDIT_K_RIGHT | STB_TEXTEDIT_K_SHIFT);
+                if (!is_eol /*&& is_multiline*/)
+                {
+                    ImSwap(state->Stb.select_start, state->Stb.select_end);
+                    state->Stb.cursor = state->Stb.select_end;
+                }
+                state->CursorFollow = false;
+            }
+            state->CursorAnimReset();
         }
         else if (io.MouseClicked[0] && !state->SelectedAllMouseLock)
         {
+            // FIXME: unselect on late click could be done release?
             if (hovered)
             {
                 stb_textedit_click(state, &state->Stb, mouse_x, mouse_y);
@@ -3999,12 +4067,13 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         if (state->SelectedAllMouseLock && !io.MouseDown[0])
             state->SelectedAllMouseLock = false;
 
+        const bool ignore_char_inputs = (io.KeyCtrl && !io.KeyAlt) || (is_osx && io.KeySuper);
+
+        // Process regular text input (before we check for Return because using some IME will effectively send a Return?)
+        // We ignore CTRL inputs, but need to allow ALT+CTRL as some keyboards (e.g. German) use AltGR (which _is_ Alt+Ctrl) to input certain characters.
         if (io.InputQueueCharacters.Size > 0)
         {
-            // Process text input (before we check for Return because using some IME will effectively send a Return?)
-            // We ignore CTRL inputs, but need to allow CTRL+ALT as some keyboards (e.g. German) use AltGR - which is Alt+Ctrl - to input certain characters.
-            bool ignore_inputs = (io.KeyCtrl && !io.KeyAlt) || (is_osx && io.KeySuper);
-            if (!ignore_inputs && !is_readonly && !user_nav_input_start)
+            if (!ignore_char_inputs && !is_readonly && !user_nav_input_start)
                 for (int n = 0; n < io.InputQueueCharacters.Size; n++)
                 {
                     // Insert character if they pass filtering

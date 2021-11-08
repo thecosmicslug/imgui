@@ -324,6 +324,7 @@ private:
     IMGUI_API void TextLineWithSH(const char *fmt...);
 
     IMGUI_API static void StaticInit();
+    IMGUI_API static void CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end);
     friend bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Language lang,const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data, ImGuiID* pOptionalItemIDOut);
     friend const char* GetSupportedExtensions();
     friend Language GetLanguageFromExtension(const char* ext);

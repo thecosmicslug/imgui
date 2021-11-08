@@ -19,6 +19,42 @@
 
 namespace ImGui {
 
+// ImGui::CalculateListClipping() is now deprecated, and this fallback function is provided (somewhere in Dear ImGui source):
+// ================================================================================================
+// Legacy helper to calculate coarse clipping of large list of evenly sized items.
+// This legacy API is not ideal because it assume we will return a single contiguous rectangle.
+// Prefer using ImGuiListClipper which can returns non-contiguous ranges.
+void ListViewBase::CalcListClipping(int items_count, float items_height, int* out_items_display_start, int* out_items_display_end)    {
+    ImGuiContext& g = *GImGui;ImGuiWindow* window = g.CurrentWindow;
+    if (g.LogEnabled)   {
+        // If logging is active, do not perform any clipping
+        *out_items_display_start = 0;
+        *out_items_display_end = items_count;
+        return;
+    }
+    if (GetSkipItemForListClipping())   {
+        *out_items_display_start = *out_items_display_end = 0;
+        return;
+    }
+    // We create the union of the ClipRect and the scoring rect which at worst should be 1 page away from ClipRect
+    // We don't include g.NavId's rectangle in there (unless g.NavJustMovedToId is set) because the rectangle enlargement can get costly.
+    ImRect rect = window->ClipRect;
+    if (g.NavMoveScoringItems)  rect.Add(g.NavScoringNoClipRect);
+    if (g.NavJustMovedToId && window->NavLastIds[0] == g.NavJustMovedToId)  rect.Add(ImGui::WindowRectRelToAbs(window, window->NavRectRel[0])); // Could store and use NavJustMovedToRectRel
+    const ImVec2 pos = window->DC.CursorPos;
+    int start = (int)((rect.Min.y - pos.y) / items_height);
+    int end = (int)((rect.Max.y - pos.y) / items_height);
+    // When performing a navigation request, ensure we have one item extra in the direction we are moving to
+    if (g.NavMoveScoringItems && g.NavMoveClipDir == ImGuiDir_Up)   start--;
+    if (g.NavMoveScoringItems && g.NavMoveClipDir == ImGuiDir_Down) end++;
+    start = ImClamp(start, 0, items_count);
+    end = ImClamp(end + 1, start, items_count);
+    *out_items_display_start = start;
+    *out_items_display_end = end;
+}
+// =================================================================================================
+// (P.S. of course I got no idea/time to figure out how to correctly replace this function...)
+
 bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalColumnReorderVector, int maxNumColumnToDisplay, float contentRegionWidthForHorizontalScrolling) const {
     //if (listViewHeight<0) listViewHeight = getMaxPossibleHeight();  // Hack to fix an issue, but I leave it to the user, and comment it out
     ImGui::PushID(this);
@@ -103,7 +139,7 @@ bool ListViewBase::render(float listViewHeight, const ImVector<int> *pOptionalCo
         float itemHeight = ImGui::GetTextLineHeightWithSpacing();        
         int displayStart = 0, displayEnd = (int) numRows;
 
-        ImGui::CalcListClipping(numRows, itemHeight, &displayStart, &displayEnd);
+        ListViewBase::CalcListClipping(numRows, itemHeight, &displayStart, &displayEnd);
 
         if (scrollToRow>=0) {
             if (displayStart>scrollToRow)  displayStart = scrollToRow;
