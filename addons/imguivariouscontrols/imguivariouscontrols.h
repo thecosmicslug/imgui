@@ -929,4 +929,13 @@ namespace ImGui {
 
     }   // namespace Pie
 } // namespace ImGui
+
+
+namespace ImGui {
+// ColoredButtonV1: code posted by @ocornut here: https://github.com/ocornut/imgui/issues/4722
+// [Button rounding depends on the FrameRounding Style property (but can be overridden with the last argument)]
+    bool ColoredButtonV1(const char* label, const ImVec2& size, ImU32 text_color, ImU32 bg_color_1, ImU32 bg_color_2, float frame_rounding_override=-1.f);
+}
+
+
 #endif

@@ -1410,8 +1410,23 @@ void DrawGL()	// Mandatory
         if (pieSelected)    {
             //ImGui::SameLine();
             ImGui::Text("Last selected pie menu item: %s",strlen(pieSelected)==0?"NONE":pieSelected);
-            // This does not work! So I guess there's no way to detect which item has been chosen!
         }
+
+
+        // ColoredButtonV1: code posted by @ocornut here:
+        // https://github.com/ocornut/imgui/issues/4722
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("ColorButtonV1 (by @ocornut: hope we can use it)");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Code posted by @ocornut here:\nhttps://github.com/ocornut/imgui/issues/4722");
+        ImGui::Separator();
+        // [Button rounding depends on the FrameRounding Style property (but can be overridden with the last argument)]
+        const float cbv1width = ImGui::GetContentRegionAvail().x*0.45f;
+        ImGui::ColoredButtonV1("Hello##ColoredButtonV1Hello", ImVec2(cbv1width, 0.0f), IM_COL32(255, 255, 255, 255), IM_COL32(200, 60, 60, 255), IM_COL32(180, 40, 90, 255));
+        ImGui::SameLine();
+        ImGui::ColoredButtonV1("You##ColoredButtonV1You", ImVec2(cbv1width, 0.0f), IM_COL32(255, 255, 255, 255), IM_COL32(50, 220, 60, 255), IM_COL32(69, 150, 70, 255),10.0f); // FrameRounding in [0.0,12.0]
+        ImGui::Separator();
+        ImGui::Spacing();
 
 #       else //NO_IMGUIVARIOUSCONTROLS
             ImGui::Text("%s","Excluded from this build.\n");

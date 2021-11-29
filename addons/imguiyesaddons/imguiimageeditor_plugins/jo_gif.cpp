@@ -63,7 +63,7 @@ extern jo_gif_t jo_gif_start(const char *filename, short width, short height, sh
 // rgba         | the pixels
 // delayCsec    | amount of time in between frames (in centiseconds)
 // localPalette | true if you want a unique palette generated for this frame (does not effect future frames)
-// hasTransparentColor | true if you want to resarve a space in th map for the transparent color
+// hasTransparentColor | true if you want to reserve a space in the map for the transparent color
 extern void jo_gif_frame(jo_gif_t *gif, unsigned char *rgba, short delayCsec, bool localPalette, bool hasTransparentColor);
 
 // gif          | the state (returned from jo_gif_start)

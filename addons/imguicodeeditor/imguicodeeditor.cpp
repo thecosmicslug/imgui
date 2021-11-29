@@ -3977,6 +3977,9 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     int backup_current_text_length = 0;
     bool item_active = (g.ActiveId == id);
 
+    const char* apply_new_text = NULL;
+    int apply_new_text_length = 0;
+
     if (item_active)
     {
         if (is_readonly && !g.ActiveIdIsJustActivated)
@@ -3994,8 +3997,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         //state->Edited = false;
         state->BufCapacityA = buf_size;
         state->Flags = flags;
-        state->UserCallback = callback;
-        state->UserCallbackData = callback_user_data;
+        //state->UserCallback = callback;
+        //state->UserCallbackData = callback_user_data;
 
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
         // Down the line we should have a cleaner library-wide concept of Selected vs Active.
@@ -4238,8 +4241,6 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         }
         }
 
-        const char* apply_new_text = NULL;
-        int apply_new_text_length = 0;
         if (cancel_edit) {
             // Restore initial value. Only return true if restoring to the initial value changes the current buffer contents.
             if (!is_readonly && strcmp(buf, state->InitialTextA.Data) != 0)
@@ -4306,8 +4307,9 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                     callback_data.Flags = flags;
                     callback_data.UserData = callback_user_data;
 
+                    char* callback_buf = is_readonly ? buf : state->TextA.Data;
                     callback_data.EventKey = event_key;
-                    callback_data.Buf = state->TextA.Data;
+                    callback_data.Buf = callback_buf;
                     callback_data.BufTextLen = state->CurLenA;
                     callback_data.BufSize = state->BufCapacityA;
                     callback_data.BufDirty = false;
@@ -4322,7 +4324,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                     callback(&callback_data);
 
                     // Read back what user may have modified
-                    IM_ASSERT(callback_data.Buf == state->TextA.Data);  // Invalid to modify those fields
+                    IM_ASSERT(callback_data.Buf == callback_buf);  // Invalid to modify those fields
                     IM_ASSERT(callback_data.BufSize == state->BufCapacityA);
                     IM_ASSERT(callback_data.Flags == flags);
                     /*if (callback_data.CursorPos != utf8_cursor_pos)            { state->Stb.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos); state->CursorFollow = true; }
@@ -4353,46 +4355,46 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             }
         }
 
-        // Copy result to user buffer
-        if (apply_new_text)
-        {
-            // We cannot test for 'backup_current_text_length != apply_new_text_length' here because we have no guarantee that the size
-            // of our owned buffer matches the size of the string object held by the user, and by design we allow InputText() to be used
-            // without any storage on user's side.
-            IM_ASSERT(apply_new_text_length >= 0);
-            if (is_resizable)
-            {
-                ImGuiInputTextCallbackData callback_data;
-                callback_data.EventFlag = ImGuiInputTextFlags_CallbackResize;
-                callback_data.Flags = flags;
-                callback_data.Buf = buf;
-                callback_data.BufTextLen = apply_new_text_length;
-                callback_data.BufSize = buf_size>((size_t)apply_new_text_length+1)?buf_size:((size_t)apply_new_text_length+1);
-                callback_data.UserData = callback_user_data;
-                callback(&callback_data);
-                buf = callback_data.Buf;
-                buf_size = callback_data.BufSize;
-                apply_new_text_length = (int)callback_data.BufTextLen<((int)buf_size-1)?(int)callback_data.BufTextLen:((int)buf_size-1);
-                IM_ASSERT(apply_new_text_length <= (int)buf_size);
-            }
-            //IMGUI_DEBUG_LOG("InputText(\"%s\"): apply_new_text length %d\n", label, apply_new_text_length);
-
-            // If the underlying buffer resize was denied or not carried to the next frame, apply_new_text_length+1 may be >= buf_size.
-            ImStrncpy(buf, state->TextA.Data, apply_new_text_length+1<(int)buf_size?apply_new_text_length+1:(int)buf_size);
-            value_changed = true;
-        }
-
         // Clear temporary user storage
         state->Flags = ImGuiInputTextFlags_None;
-        state->UserCallback = NULL;
-        state->UserCallbackData = NULL;
-
+        //state->UserCallback = NULL;
+        //state->UserCallbackData = NULL;
     }
 
+    // Copy result to user buffer. This can currently only happen when (g.ActiveId == id)
+    if (apply_new_text!=NULL)
+    {
+        // We cannot test for 'backup_current_text_length != apply_new_text_length' here because we have no guarantee that the size
+        // of our owned buffer matches the size of the string object held by the user, and by design we allow InputText() to be used
+        // without any storage on user's side.
+        IM_ASSERT(apply_new_text_length >= 0);
+        if (is_resizable)
+        {
+            ImGuiInputTextCallbackData callback_data;
+            callback_data.EventFlag = ImGuiInputTextFlags_CallbackResize;
+            callback_data.Flags = flags;
+            callback_data.Buf = buf;
+            callback_data.BufTextLen = apply_new_text_length;
+            callback_data.BufSize = buf_size>((size_t)apply_new_text_length+1)?buf_size:((size_t)apply_new_text_length+1);
+            callback_data.UserData = callback_user_data;
+            callback(&callback_data);
+            buf = callback_data.Buf;
+            buf_size = callback_data.BufSize;
+            apply_new_text_length = (int)callback_data.BufTextLen<((int)buf_size-1)?(int)callback_data.BufTextLen:((int)buf_size-1);
+            IM_ASSERT(apply_new_text_length <= (int)buf_size);
+        }
+        //IMGUI_DEBUG_LOG("InputText(\"%s\"): apply_new_text length %d\n", label, apply_new_text_length);
+
+        // If the underlying buffer resize was denied or not carried to the next frame, apply_new_text_length+1 may be >= buf_size.
+        ImStrncpy(buf, state->TextA.Data, apply_new_text_length+1<(int)buf_size?apply_new_text_length+1:(int)buf_size);
+        value_changed = true;
+    }
+
+    // Release active ID at the end of the function (so e.g. pressing Return still does a final application of the value)
     if (clear_active_id && g.ActiveId == id)
         ClearActiveID();
 
-    // Render
+    // Render frame
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 draw_pos = draw_window->DC.CursorPos;
 

@@ -76,7 +76,7 @@ NOTES:
 /*
  * IMGUIIMAGEEDITOR_STBIMAGE_PATH           - (default:"./addons/imguibindings/stb_image.h")
  *
- * IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS  - Enables support for saving .gif, for loading/saving .ico files and for loading .svg files.
+ * IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS  - Enables support for saving .gif, for loading/saving .ico and .qoi files and for loading .svg files.
  *                                          - Overrides the .png and .jpg encoders from <stb_image_write.h> to
  *                                            lodePng.h and tiny_jpeg.h (Each can be reverted by defining
  *                                            IMGUIIMAGEEDITOR_NO_LODEPNG_PLUGIN and/or
@@ -91,6 +91,7 @@ NOTES:
  *                                            IMGUIIMAGEEDITOR_NO_JO_GIF_PLUGIN
  *                                            IMGUIIMAGEEDITOR_NO_TINY_ICO_PLUGIN
  *                                            IMGUIIMAGEEDITOR_NO_NANOSVG_PLUGIN
+ *                                            IMGUIIMAGEEDITOR_NO_QOI_PLUGIN
  *                                            When not used, these plugins can be safely deleted from the plugin folder.
  *
  *                                            [Experimental]: when IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS is defined,
@@ -129,6 +130,9 @@ NOTES:
 */
 
 /* CHANGELOG:
+ IMGUIIMAGEEDITOR_VERSION 0.36
+ * Added support for saving/loading .qoi files when IMGUIIMAGEEDITOR_ENABLE_NON_STB_PLUGINS is defined and IMGUIIMAGEEDITOR_NO_QOI_PLUGIN is not defined.
+
  IMGUIIMAGEEDITOR_VERSION 0.35
  * When both lodepng and stb_image_write are available, now .png images are saved using stb_image_write (so that saved .png images are now bigger in size).
                 Reason: lodepng_encode_memory(...) is not robust for us!

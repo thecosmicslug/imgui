@@ -318,6 +318,20 @@ static unsigned char* ZlibCompressFromMemoryStbWrite(const unsigned char* memory
 #endif //NANOSVGRAST_H
 #endif //IMGUIIMAGEEDITOR_NO_NANOSVG_PLUGIN
 
+#ifndef IMGUIIMAGEEDITOR_NO_QOI_PLUGIN
+#ifndef QOI_H
+#ifndef IMGUIIMAGEEDITOR_NO_QOI_IMPLEMENTATION
+#define QOI_IMPLEMENTATION
+#define QOI_NO_STDIO
+#endif //IMGUIIMAGEEDITOR_NO_QOI_IMPLEMENTATION
+extern "C"  {
+#include  "imguiimageeditor_plugins/qoi.h"
+}
+#ifndef QOI_H
+#define QOI_H
+#endif //QOI_H
+#endif //QOI_H
+#endif //IMGUIIMAGEEDITOR_NO_QOI_PLUGIN
 
 #ifdef IMGUI_USE_LIBTIFF    // This needs libtiff
 extern "C" {
@@ -561,6 +575,44 @@ static unsigned char* webp_load_from_memory(const char* buffer,int size,int& w,i
     return data;
 }
 #endif //_WEBP_
+
+#ifdef QOI_H
+#   ifndef IMGUIIMAGEEDITOR_QOI_DEFAULT_COLORSPACE
+#       define IMGUIIMAGEEDITOR_QOI_DEFAULT_COLORSPACE /*QOI_SRGB,*/ QOI_SRGB_LINEAR_ALPHA /*or QOI_LINEAR*/
+//      The colorspace is purely informative. It will be saved to the file header, but does not affect en-/decoding in any way.
+#   endif
+static bool qoi_save_to_memory(const unsigned char* pixels,int w,int h,int c,ImVector<char>& rv) {
+    rv.clear();
+    if (!pixels || w<=0 || h<=0 || (c!=3 && c!=4)) return false;
+    unsigned char* output = NULL;int size = 0;
+    qoi_desc desc = {};
+    desc.width = w;
+    desc.height = h;
+    desc.channels = c;
+    desc.colorspace = IMGUIIMAGEEDITOR_QOI_DEFAULT_COLORSPACE;
+    output = (unsigned char*) qoi_encode(pixels, &desc, &size);
+    if (output)   {
+        if (size>0) {rv.resize(size);memcpy(&rv[0],output,size);}
+        QOI_FREE(output);output=NULL;
+    }
+    return size>0;
+}
+static unsigned char* qoi_load_from_memory(const char* buffer,int size,int& w,int& h,int &c) {
+    unsigned char* data = NULL;
+    qoi_desc desc = {};
+    data = (unsigned char*) qoi_decode(buffer, size, &desc, /*int channels*/0);
+    w = desc.width;
+    h = desc.height;
+    c = desc.channels;
+    if (data)   {
+        // To be safer, we should re-allocate data using STBI_MALLOC, because it will be released with STBI_FREE
+        unsigned char* data2 = (unsigned char*)STBI_MALLOC(w*h*c);
+        if (data2) memcpy(data2,data,w*h*c);
+        QOI_FREE(data);data=data2;
+    }
+    return data;
+}
+#endif //QOI_H
 
 #ifdef _SVG_
 static unsigned char* svg_load_from_memory(const char* buffer,int size,int& w,int& h,int &c) {
@@ -949,6 +1001,11 @@ static void InitSupportedFileExtensions() {
         strcat(p[3],".webp;");
         strcat(p[4],".webp;");
 #       endif //_WEBP_
+#       ifdef QOI_H
+        strcat(p[0],".qoi;");
+        strcat(p[3],".qoi;");
+        strcat(p[4],".qoi;");
+#       endif //QOI_H
         for (int i=0;i<5;i++)   {
             const int len = strlen(p[i]);
             if (len>0) p[i][len-1]='\0';   // trim last ';'
@@ -984,6 +1041,9 @@ static void InitSupportedFileExtensions() {
 #       endif
 #       ifdef _WEBP_
         strcat(p,".webp;");
+#       endif
+#       ifdef QOI_H
+        strcat(p,".qoi;");
 #       endif
 #       ifdef _SVG_
         strcat(p,".svg;");
@@ -5066,6 +5126,11 @@ struct StbImage {
             image = ImGuiIE::svg_load_from_memory((const char*) buffer,size,w,h,c);
 #           endif //_SVG_
         }
+        else if (ext && (strcmp(ext,".qoi")==0))   {
+#           ifdef QOI_H
+            image = ImGuiIE::qoi_load_from_memory((const char*) buffer,size,w,h,c);
+#           endif //QOI_H
+        }
         else if (!image) image = stbi_load_from_memory(buffer,size,&w,&h,&c,0);
         if (!image) return false;
         if (c!=1 && c!=3 && c<4) {
@@ -5287,6 +5352,17 @@ struct StbImage {
                 }
             }
 #           endif //_WEBP_
+        }
+        else if (strcmp(feh.ext,".qoi")==0) {
+            IM_ASSERT(c==3 || c==4);
+#           ifdef QOI_H
+            if (!rv) {
+                ImVector<char> outBuf;
+                if (ImGuiIE::qoi_save_to_memory(image,w,h,c,outBuf)) {
+                    rv = ImGuiIE::SetFileContent(path,(const unsigned char*)&outBuf[0],outBuf.size());
+                }
+            }
+#           endif //QOI_H
         }
 
         if (rv) {
