@@ -946,6 +946,8 @@ static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVe
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
 static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open);
+static void             RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32 col);
+static void             RenderDimmedBackgrounds();
 
 // Viewports
 static void             UpdateViewportsNewFrame();
@@ -1946,7 +1948,7 @@ void ImGuiStorage::BuildSortByKey()
 {
     struct StaticFunc
     {
-        static int IMGUI_CDECL PairCompareByID(const void* lhs, const void* rhs)
+        static int IMGUI_CDECL PairComparerByID(const void* lhs, const void* rhs)
         {
             // We can't just do a subtraction because qsort uses signed integers and subtracting our ID doesn't play well with that.
             if (((const ImGuiStoragePair*)lhs)->key > ((const ImGuiStoragePair*)rhs)->key) return +1;
@@ -1954,8 +1956,7 @@ void ImGuiStorage::BuildSortByKey()
             return 0;
         }
     };
-    if (Data.Size > 1)
-        ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), StaticFunc::PairCompareByID);
+    ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), StaticFunc::PairComparerByID);
 }
 
 int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
@@ -3386,6 +3387,17 @@ bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id)
     return false;
 }
 
+// This is also inlined in ItemAdd()
+// Note: if ImGuiItemStatusFlags_HasDisplayRect is set, user needs to set window->DC.LastItemDisplayRect!
+void ImGui::SetLastItemData(ImGuiID item_id, ImGuiItemFlags in_flags, ImGuiItemStatusFlags item_flags, const ImRect& item_rect)
+{
+    ImGuiContext& g = *GImGui;
+    g.LastItemData.ID = item_id;
+    g.LastItemData.InFlags = in_flags;
+    g.LastItemData.StatusFlags = item_flags;
+    g.LastItemData.Rect = item_rect;
+}
+
 float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 {
     if (wrap_pos_x < 0.0f)
@@ -4304,8 +4316,7 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
     if (window->Active)
     {
         int count = window->DC.ChildWindows.Size;
-        if (count > 1)
-            ImQsort(window->DC.ChildWindows.Data, (size_t)count, sizeof(ImGuiWindow*), ChildWindowComparer);
+        ImQsort(window->DC.ChildWindows.Data, (size_t)count, sizeof(ImGuiWindow*), ChildWindowComparer);
         for (int i = 0; i < count; i++)
         {
             ImGuiWindow* child = window->DC.ChildWindows[i];
@@ -4432,6 +4443,60 @@ void ImGui::PopClipRect()
     window->ClipRect = window->DrawList->_ClipRectStack.back();
 }
 
+static void ImGui::RenderDimmedBackgroundBehindWindow(ImGuiWindow* window, ImU32 col)
+{
+    if ((col & IM_COL32_A_MASK) == 0)
+        return;
+
+    ImGuiViewportP* viewport = (ImGuiViewportP*)GetMainViewport();
+    ImRect viewport_rect = viewport->GetMainRect();
+
+    // Draw behind window by moving the draw command at the FRONT of the draw list
+    {
+        ImDrawList* draw_list = window->RootWindow->DrawList;
+        draw_list->AddDrawCmd();
+        draw_list->PushClipRect(viewport_rect.Min - ImVec2(1, 1), viewport_rect.Max + ImVec2(1, 1), false); // Ensure ImDrawCmd are not merged
+        draw_list->AddRectFilled(viewport_rect.Min, viewport_rect.Max, col);
+        ImDrawCmd cmd = draw_list->CmdBuffer.back();
+        IM_ASSERT(cmd.ElemCount == 6);
+        draw_list->CmdBuffer.pop_back();
+        draw_list->CmdBuffer.push_front(cmd);
+    }
+}
+
+static void ImGui::RenderDimmedBackgrounds()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* modal_window = GetTopMostAndVisiblePopupModal();
+    const bool dim_bg_for_modal = (modal_window != NULL);
+    const bool dim_bg_for_window_list = (g.NavWindowingTargetAnim != NULL && g.NavWindowingTargetAnim->Active);
+    if (!dim_bg_for_modal && !dim_bg_for_window_list)
+        return;
+
+    if (dim_bg_for_modal)
+    {
+        // Draw dimming behind modal
+        RenderDimmedBackgroundBehindWindow(modal_window, GetColorU32(ImGuiCol_ModalWindowDimBg, g.DimBgRatio));
+    }
+    else if (dim_bg_for_window_list)
+    {
+        // Draw dimming behind CTRL+Tab target window
+        RenderDimmedBackgroundBehindWindow(g.NavWindowingTargetAnim, GetColorU32(ImGuiCol_NavWindowingDimBg, g.DimBgRatio));
+
+        // Draw border around CTRL+Tab target window
+        ImGuiWindow* window = g.NavWindowingTargetAnim;
+        ImGuiViewport* viewport = GetMainViewport();
+        float distance = g.FontSize;
+        ImRect bb = window->Rect();
+        bb.Expand(distance);
+        if (bb.GetWidth() >= viewport->Size.x && bb.GetHeight() >= viewport->Size.y)
+            bb.Expand(-distance - 1.0f); // If a window fits the entire viewport, adjust its highlight inward
+        window->DrawList->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size);
+        window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), window->WindowRounding, 0, 3.0f);
+        window->DrawList->PopClipRect();
+    }
+}
+
 // This is normally called by Render(). You may want to call it directly if you want to avoid calling Render() but the gain will be very minimal.
 void ImGui::EndFrame()
 {
@@ -4526,6 +4591,7 @@ void ImGui::Render()
 
     if (g.FrameCountEnded != g.FrameCount)
         EndFrame();
+    const bool first_render_of_frame = (g.FrameCountRendered != g.FrameCount);
     g.FrameCountRendered = g.FrameCount;
     g.IO.MetricsRenderWindows = 0;
 
@@ -4555,6 +4621,10 @@ void ImGui::Render()
         if (windows_to_render_top_most[n] && IsWindowActiveAndVisible(windows_to_render_top_most[n])) // NavWindowingTarget is always temporarily displayed as the top-most window
             AddRootWindowToDrawData(windows_to_render_top_most[n]);
 
+    // Draw modal/window whitening backgrounds
+    if (first_render_of_frame)
+        RenderDimmedBackgrounds();
+
     // Setup ImDrawData structures for end-user
     g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = 0;
     for (int n = 0; n < g.Viewports.Size; n++)
@@ -4563,7 +4633,7 @@ void ImGui::Render()
         viewport->DrawDataBuilder.FlattenIntoSingleLayer();
 
         // Draw software mouse cursor if requested by io.MouseDrawCursor flag
-        if (g.IO.MouseDrawCursor)
+        if (g.IO.MouseDrawCursor && first_render_of_frame)
             RenderMouseCursor(GetForegroundDrawList(viewport), g.IO.MousePos, g.Style.MouseCursorScale, g.MouseCursor, IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32(0, 0, 0, 48));
 
         // Add foreground ImDrawList (for each active viewport)
@@ -4789,11 +4859,11 @@ bool ImGui::IsMouseDoubleClicked(ImGuiMouseButton button)
     return g.IO.MouseClickedCount[button] == 2;
 }
 
-bool ImGui::IsMouseTripleClicked(ImGuiMouseButton button)
+int ImGui::GetMouseClickedCount(ImGuiMouseButton button)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
-    return g.IO.MouseClickedCount[button] == 3;
+    return g.IO.MouseClickedCount[button];
 }
 
 // Return if a mouse click/drag went past the given threshold. Valid to call during the MouseReleased frame.
@@ -5344,11 +5414,11 @@ ImVec2 ImGui::CalcWindowNextAutoFitSize(ImGuiWindow* window)
     return size_final;
 }
 
-static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags)
+static ImGuiCol GetWindowBgColorIdx(ImGuiWindow* window)
 {
-    if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
+    if (window->Flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
         return ImGuiCol_PopupBg;
-    if (flags & ImGuiWindowFlags_ChildWindow)
+    if (window->Flags & ImGuiWindowFlags_ChildWindow)
         return ImGuiCol_ChildBg;
     return ImGuiCol_WindowBg;
 }
@@ -5626,7 +5696,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
         // Window background
         if (!(flags & ImGuiWindowFlags_NoBackground))
         {
-            ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
+            ImU32 bg_col = GetColorU32(GetWindowBgColorIdx(window));
             bool override_alpha = false;
             float alpha = 1.0f;
             if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasBgAlpha)
@@ -5874,7 +5944,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     // Update ->RootWindow and others pointers (before any possible call to FocusWindow)
     if (first_begin_of_the_frame)
+    {
         UpdateWindowParentAndRootLinks(window, flags, parent_window);
+        window->ParentWindowInBeginStack = parent_window_in_stack;
+    }
 
     // Process SetNextWindow***() calls
     // (FIXME: Consider splitting the HasXXX flags into X/Y components
@@ -6226,24 +6299,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         PushClipRect(host_rect.Min, host_rect.Max, false);
 
-        // Draw modal window background (darkens what is behind them, all viewports)
-        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetTopMostPopupModal() && window->HiddenFramesCannotSkipItems <= 0;
-        const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && (window == g.NavWindowingTargetAnim->RootWindow);
-        if (dim_bg_for_modal || dim_bg_for_window_list)
-        {
-            const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
-            window->DrawList->AddRectFilled(viewport_rect.Min, viewport_rect.Max, dim_bg_col);
-        }
-
-        // Draw navigation selection/windowing rectangle background
-        if (dim_bg_for_window_list && window == g.NavWindowingTargetAnim)
-        {
-            ImRect bb = window->Rect();
-            bb.Expand(g.FontSize);
-            if (!bb.Contains(viewport_rect)) // Avoid drawing if the window covers all the viewport anyway
-                window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha * 0.25f), g.Style.WindowRounding);
-        }
-
         // Child windows can render their decoration (bg color, border, scrollbars, etc.) within their parent to save a draw call (since 1.71)
         // When using overlapping child windows, this will break the assumption that child z-order is mapped to submission order.
         // FIXME: User code may rely on explicit sorting of overlapping child window and would need to disable this somehow. Please get in contact if you are affected (github #4493)
@@ -6269,20 +6324,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
             if (render_decorations_in_parent)
                 window->DrawList = &window->DrawListInst;
-        }
-
-        // Draw navigation selection/windowing rectangle border
-        if (g.NavWindowingTargetAnim == window)
-        {
-            float rounding = ImMax(window->WindowRounding, g.Style.WindowRounding);
-            ImRect bb = window->Rect();
-            bb.Expand(g.FontSize);
-            if (bb.Contains(viewport_rect)) // If a window fits the entire viewport, adjust its highlight inward
-            {
-                bb.Expand(-g.FontSize - 1.0f);
-                rounding = window->WindowRounding;
-            }
-            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, 0, 3.0f);
         }
 
         // UPDATE RECTANGLES (2- THOSE AFFECTED BY SCROLLING)
@@ -6376,10 +6417,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // We fill last item data based on Title Bar/Tab, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
         // This is useful to allow creating context menus on title bar only, etc.
-        g.LastItemData.ID = window->MoveId;
-        g.LastItemData.InFlags = g.CurrentItemFlags;
-        g.LastItemData.StatusFlags = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
-        g.LastItemData.Rect = title_bar_rect;
+        SetLastItemData(window->MoveId, g.CurrentItemFlags, IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0, title_bar_rect);
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
         if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
@@ -6827,8 +6865,8 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
         return false;
     if (flags & ImGuiFocusedFlags_AnyWindow)
         return true;
-    IM_ASSERT(cur_window); // Not inside a Begin()/End()
 
+    IM_ASSERT(cur_window); // Not inside a Begin()/End()
     const bool popup_hierarchy = (flags & ImGuiFocusedFlags_NoPopupHierarchy) == 0;
     if (flags & ImGuiHoveredFlags_RootWindow)
         cur_window = GetCombinedRootWindow(cur_window, popup_hierarchy);
@@ -7944,7 +7982,7 @@ void ImGui::EndGroup()
 
     window->DC.CurrLineTextBaseOffset = ImMax(window->DC.PrevLineTextBaseOffset, group_data.BackupCurrLineTextBaseOffset);      // FIXME: Incorrect, we should grab the base offset from the *first line* of the group but it is hard to obtain now.
     ItemSize(group_bb.GetSize());
-    ItemAdd(group_bb, 0);
+    ItemAdd(group_bb, 0, NULL, ImGuiItemFlags_NoTabStop);
 
     // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive(), IsItemDeactivated() etc. will be functional on the entire group.
     // It would be be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but would put a little more burden on individual widgets.
@@ -8340,6 +8378,16 @@ ImGuiWindow* ImGui::GetTopMostPopupModal()
     for (int n = g.OpenPopupStack.Size - 1; n >= 0; n--)
         if (ImGuiWindow* popup = g.OpenPopupStack.Data[n].Window)
             if (popup->Flags & ImGuiWindowFlags_Modal)
+                return popup;
+    return NULL;
+}
+
+ImGuiWindow* ImGui::GetTopMostAndVisiblePopupModal()
+{
+    ImGuiContext& g = *GImGui;
+    for (int n = g.OpenPopupStack.Size - 1; n >= 0; n--)
+        if (ImGuiWindow* popup = g.OpenPopupStack.Data[n].Window)
+            if ((popup->Flags & ImGuiWindowFlags_Modal) && IsWindowActiveAndVisible(popup))
                 return popup;
     return NULL;
 }
@@ -11316,6 +11364,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 // - DebugNodeWindow() [Internal]
 // - DebugNodeWindowSettings() [Internal]
 // - DebugNodeWindowsList() [Internal]
+// - DebugNodeWindowsListByBeginStackParent() [Internal]
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_METRICS_WINDOW
@@ -11538,8 +11587,27 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
 
     // Windows
-    DebugNodeWindowsList(&g.Windows, "Windows");
-    //DebugNodeWindowsList(&g.WindowsFocusOrder, "WindowsFocusOrder");
+    if (TreeNode("Windows", "Windows (%d)", g.Windows.Size))
+    {
+        //SetNextItemOpen(true, ImGuiCond_Once);
+        DebugNodeWindowsList(&g.Windows, "By display order");
+        DebugNodeWindowsList(&g.WindowsFocusOrder, "By focus order (root windows)");
+        if (TreeNode("By submission order (begin stack)"))
+        {
+            // Here we display windows in their submitted order/hierarchy, however note that the Begin stack doesn't constitute a Parent<>Child relationship!
+            ImVector<ImGuiWindow*>& temp_buffer = g.WindowsTempSortBuffer;
+            temp_buffer.resize(0);
+            for (int i = 0; i < g.Windows.Size; i++)
+                if (g.Windows[i]->LastFrameActive + 1 >= g.FrameCount)
+                    temp_buffer.push_back(g.Windows[i]);
+            struct Func { static int IMGUI_CDECL WindowComparerByBeginOrder(const void* lhs, const void* rhs) { return ((int)(*(const ImGuiWindow* const *)lhs)->BeginOrderWithinContext - (*(const ImGuiWindow* const*)rhs)->BeginOrderWithinContext); } };
+            ImQsort(temp_buffer.Data, (size_t)temp_buffer.Size, sizeof(ImGuiWindow*), Func::WindowComparerByBeginOrder);
+            DebugNodeWindowsListByBeginStackParent(temp_buffer.Data, temp_buffer.Size, NULL);
+            TreePop();
+        }
+
+        TreePop();
+    }
 
     // DrawLists
     int drawlist_count = 0;
@@ -12163,7 +12231,6 @@ void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* la
 {
     if (!TreeNode(label, "%s (%d)", label, windows->Size))
         return;
-    Text("(In front-to-back order:)");
     for (int i = windows->Size - 1; i >= 0; i--) // Iterate front to back
     {
         PushID((*windows)[i]);
@@ -12171,6 +12238,24 @@ void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* la
         PopID();
     }
     TreePop();
+}
+
+// FIXME-OPT: This is technically suboptimal, but it is simpler this way.
+void ImGui::DebugNodeWindowsListByBeginStackParent(ImGuiWindow** windows, int windows_size, ImGuiWindow* parent_in_begin_stack)
+{
+    for (int i = 0; i < windows_size; i++)
+    {
+        ImGuiWindow* window = windows[i];
+        if (window->ParentWindowInBeginStack != parent_in_begin_stack)
+            continue;
+        char buf[20];
+        ImFormatString(buf, IM_ARRAYSIZE(buf), "[%04d] Window", window->BeginOrderWithinContext);
+        //BulletText("[%04d] Window '%s'", window->BeginOrderWithinContext, window->Name);
+        DebugNodeWindow(window, buf);
+        Indent();
+        DebugNodeWindowsListByBeginStackParent(windows + i + 1, windows_size - i - 1, window);
+        Unindent();
+    }
 }
 
 //-----------------------------------------------------------------------------
