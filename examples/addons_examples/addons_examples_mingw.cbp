@@ -38,6 +38,7 @@
 		<Unit filename="../../imgui.cpp" />
 		<Unit filename="../../imgui_demo.cpp" />
 		<Unit filename="../../imgui_draw.cpp" />
+		<Unit filename="../../imgui_tables.cpp" />		
 		<Unit filename="main.cpp">
 			<Option compilerVar="CC" />
 		</Unit>

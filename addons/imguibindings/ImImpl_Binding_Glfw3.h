@@ -15,18 +15,40 @@
 #endif //IMGUI_GLFW_NO_NATIVE_CURSORS
 
 #ifdef GLFW_HAS_MOUSE_CURSOR_SUPPORT
+
+#   ifdef GLFW_RESIZE_NESW_CURSOR  // Let's be nice to people who pulled GLFW between 2019-04-16 (3.4 define) and 2019-11-29 (cursors defines) // FIXME: Remove when GLFW 3.4 is released?
+#       define GLFW_HAS_NEW_CURSORS    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3400) // 3.4+ GLFW_RESIZE_ALL_CURSOR, GLFW_RESIZE_NESW_CURSOR, GLFW_RESIZE_NWSE_CURSOR, GLFW_NOT_ALLOWED_CURSOR
+#   else
+#       define GLFW_HAS_NEW_CURSORS    (0)
+#   endif
+
+#   if GLFW_HAS_NEW_CURSORS==0
     static const int glfwCursorIds[] = {
         GLFW_ARROW_CURSOR,
         GLFW_IBEAM_CURSOR,
-        GLFW_HAND_CURSOR,      //SDL_SYSTEM_CURSOR_HAND,    // or SDL_SYSTEM_CURSOR_SIZEALL  //ImGuiMouseCursor_ResizeAll,                  // Unused by ImGui
-        GLFW_VRESIZE_CURSOR,       //ImGuiMouseCursor_ResizeNS,              // Unused by ImGui
-        GLFW_HRESIZE_CURSOR,       //ImGuiMouseCursor_ResizeEW,              // Unused by ImGui
-        GLFW_CROSSHAIR_CURSOR,     //ImGuiMouseCursor_ResizeNESW,
-        GLFW_CROSSHAIR_CURSOR,       //ImGuiMouseCursor_ResizeNWSE,          // Unused by ImGui
-        GLFW_HAND_CURSOR,       //ImGuiMouseCursor_Hand,          // Unused by ImGui
-        GLFW_ARROW_CURSOR,         //,ImGuiMouseCursor_Arrow
+        GLFW_HAND_CURSOR,
+        GLFW_VRESIZE_CURSOR,
+        GLFW_HRESIZE_CURSOR,
+        GLFW_CROSSHAIR_CURSOR,
+        GLFW_CROSSHAIR_CURSOR,
+        GLFW_HAND_CURSOR,
+        GLFW_ARROW_CURSOR,
         GLFW_ARROW_CURSOR
     };
+#   else
+static const int glfwCursorIds[] = {
+    GLFW_ARROW_CURSOR,          // ImGuiMouseCursor_Arrow
+    GLFW_IBEAM_CURSOR,          // ImGuiMouseCursor_TextInput
+    GLFW_RESIZE_ALL_CURSOR,     // ImGuiMouseCursor_ResizeAll
+    GLFW_VRESIZE_CURSOR,        // ImGuiMouseCursor_ResizeNS
+    GLFW_HRESIZE_CURSOR,        // ImGuiMouseCursor_ResizeEW
+    GLFW_RESIZE_NESW_CURSOR,    // ImGuiMouseCursor_ResizeNESW
+    GLFW_RESIZE_NWSE_CURSOR,    // ImGuiMouseCursor_ResizeNWSE
+    GLFW_NOT_ALLOWED_CURSOR,    // ImGuiMouseCursor_Hand
+    GLFW_ARROW_CURSOR,          // ImGuiMouseCursor_NotAllowed
+    GLFW_ARROW_CURSOR           // -1: ImGuiMouseCursor_None
+};
+#   endif
     static GLFWcursor* glfwCursors[ImGuiMouseCursor_COUNT+1];
 
 #else //GLFW_HAS_MOUSE_CURSOR_SUPPORT
@@ -173,7 +195,27 @@ static void glfw_scroll_callback(GLFWwindow* /*window*/, double xoffset, double 
     io.MouseWheelH = (xoffset != 0.0f) ? (xoffset > 0.0f ? 1 : - 1) : 0;      // Mouse wheel: -1,0,+1
 }
 static bool gImGuiCapsLockDown = false;
-static void glfw_key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/, int action, int mods)	{
+static void glfw_key_callback(GLFWwindow* /*window*/, int key, int scancode, int action, int mods)	{
+#   define GLFW_HAS_GET_KEY_NAME   (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwGetKeyName()
+#   if GLFW_HAS_GET_KEY_NAME
+    // GLFW 3.1+ attempts to "untranslate" keys, which goes the opposite of what every other framework does, making using lettered shortcuts difficult.
+    // (It had reasons to do so: namely GLFW is/was more likely to be used for WASD-type game controls rather than lettered shortcuts, but IHMO the 3.1 change could have been done differently)
+    // See https://github.com/glfw/glfw/issues/1502 for details.
+    // Adding a workaround to undo this (so our keys are translated->untranslated->translated, likely a lossy process).
+    // This won't cover edge cases but this is at least going to cover common cases.
+    const char* key_name = glfwGetKeyName(key, scancode);
+    if (key_name && key_name[0] != 0 && key_name[1] == 0)
+    {
+        const char char_names[] = "'-=[]\\,;\'./";
+        const int char_keys[] = { GLFW_KEY_GRAVE_ACCENT, GLFW_KEY_MINUS, GLFW_KEY_EQUAL, GLFW_KEY_LEFT_BRACKET, GLFW_KEY_RIGHT_BRACKET, GLFW_KEY_BACKSLASH, GLFW_KEY_COMMA, GLFW_KEY_SEMICOLON, GLFW_KEY_APOSTROPHE, GLFW_KEY_PERIOD, GLFW_KEY_SLASH, 0 };
+        IM_ASSERT(IM_ARRAYSIZE(char_names) == IM_ARRAYSIZE(char_keys));
+        if (key_name[0] >= '0' && key_name[0] <= '9')               { key = GLFW_KEY_0 + (key_name[0] - '0'); }
+        else if (key_name[0] >= 'A' && key_name[0] <= 'Z')          { key = GLFW_KEY_A + (key_name[0] - 'A'); }
+        else if (const char* p = strchr(char_names, key_name[0]))   { key = char_keys[p - char_names]; }
+    }
+    // if (action == GLFW_PRESS) printf("key %d scancode %d name '%s'\n", key, scancode, key_name);
+#   endif
+
     ImGuiIO& io = ImGui::GetIO();
     io.KeyCtrl = (mods & GLFW_MOD_CONTROL);
     io.KeyShift = (mods & GLFW_MOD_SHIFT);
@@ -187,7 +229,7 @@ static void glfw_key_callback(GLFWwindow* /*window*/, int key, int /*scancode*/,
     else if (key>=GLFW_KEY_A && key<=GLFW_KEY_Z && !io.KeyShift && !gImGuiCapsLockDown) {
         if (!(io.KeyCtrl && (key==GLFW_KEY_X || key==GLFW_KEY_C || key==GLFW_KEY_V ||
             key==GLFW_KEY_A || key==GLFW_KEY_Y || key==GLFW_KEY_Z)))    // Preserve copy/paste etc.
-                key+= ((const int)'a'-GLFW_KEY_A);
+                key+= ((int)'a'-GLFW_KEY_A);
     }
     if (key>=GLFW_KEY_F1 && key<=GLFW_KEY_F12) {
         const int i = key-GLFW_KEY_F1;
@@ -246,7 +288,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_Escape] = GLFW_KEY_ESCAPE;
     io.KeyMap[ImGuiKey_Space] = GLFW_KEY_SPACE;
 #   ifndef __EMSCRIPTEN__  // emscripten doesn't like it (and triggers a 'NewFrameSanityCheck' or something like that [But tested only with SDL2 binding, so it might work])
-    io.KeyMap[ImGuiKey_KeyPadEnter] = GLFW_KEY_KP_ENTER;
+    io.KeyMap[ImGuiKey_KeypadEnter] = GLFW_KEY_KP_ENTER;
 #   endif
 
     io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;

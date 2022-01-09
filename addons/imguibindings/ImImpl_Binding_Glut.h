@@ -350,7 +350,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)    {
     io.KeyMap[ImGuiKey_Enter] = 13;           // Enter  (ascii)
     io.KeyMap[ImGuiKey_Escape] = 27;          // Escape  (ascii)    
 #   ifndef __EMSCRIPTEN__  // emscripten doesn't like it (and triggers a 'NewFrameSanityCheck' or something like that [But tested only with SDL2 binding, so it might work])
-    io.KeyMap[ImGuiKey_KeyPadEnter] = 13;     // Enter  (ascii)
+    io.KeyMap[ImGuiKey_KeypadEnter] = 13;     // Enter  (ascii)
 #   endif
 
     io.KeyMap[ImGuiKey_A] = 1;

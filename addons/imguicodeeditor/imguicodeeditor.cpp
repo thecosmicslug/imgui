@@ -180,6 +180,7 @@ static inline float MyCalcTextWidth(const char *text, const char *text_end=NULL,
 // TODO: Do the same for utf8helper.h. Just remove it. I DON'T MIND if it will be slower, the code must be clean and ordered, not fast.
 static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* font,float size, ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, bool cpu_fine_clip)
 {
+    if (!text_begin) return;
     if (!text_end) text_end = text_begin + strlen(text_begin);
 
     if ((int)pos.y > clip_rect.w) {
@@ -214,8 +215,8 @@ static inline void ImDrawListRenderTextLine(ImDrawList* draw_list,const ImFont* 
     ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
     unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
 
-
-    while (s < text_end)
+    // Note: I had to add 's &&' below to fix a crash... please undo it if something goes wrong
+    while ( s && s < text_end)
     {
         // Decode and advance source
         unsigned int c = (unsigned int)*s;
@@ -2332,6 +2333,10 @@ void CodeEditor::render()   {
     }
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,0));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, ImGui::GetStyle().FrameRounding);
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, ImGui::GetStyle().FrameBorderSize);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(0,0));   // Ensure no clip rect so mouse hover can reach FramePadding edges
+
 
     const ImVec2 windowPos = ImGui::GetWindowPos();
     //const ImVec2 windowSize = ImGui::GetWindowSize();
@@ -2730,7 +2735,7 @@ void CodeEditor::render()   {
     //else fprintf(stderr,"Hidden: %1.2f\n",ImGui::GetScrollX());
 
     ImGui::PopFont();
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar(4);
     scrollToLine=-1;
 
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ((lines.size() - lineEnd) * lineHeight));
@@ -3853,8 +3858,10 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + size);
     //const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? (style.ItemInnerSpacing.x + label_size.x) : 0.0f, 0.0f));
 
-    ImGuiWindow* draw_window = window;    
+    ImGuiWindow* draw_window = window;
+    ImVec2 inner_size = ImVec2(size.x-window->ScrollbarSizes.x,size.y);
     ImGuiItemStatusFlags item_status_flags = window? g.LastItemData.StatusFlags : 0;
+    ImGuiLastItemData item_data_backup;if (window) item_data_backup = g.LastItemData;
 
     //static float codeEditorContentWidth = size.x;   // TODO: move to "state"
 
@@ -3915,17 +3922,22 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     const bool user_clicked = hovered && io.MouseClicked[0];
     const bool user_nav_input_start = (g.ActiveId != id) && (g.NavActivateInputId == id || g.NavActivateId == id);
     const bool user_scroll_finish = state != NULL && g.ActiveId == 0 && g.ActiveIdPreviousFrame == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
-    //const bool user_scroll_active = state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
+    const bool user_scroll_active = state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y);
 
+    const bool init_changed_specs = (state != NULL && state->Stb.single_line);
     const bool init_make_active = (user_clicked || user_scroll_finish || input_requested_by_nav || input_requested_by_tabbing);
+    const bool init_state = (init_make_active || user_scroll_active);
 
     bool clear_active_id = false;
     bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0  || user_nav_input_start);
-    if (init_make_active)
+    //if (init_make_active)
+    if ((init_state && g.ActiveId != id) || init_changed_specs)
     {
-        if (g.ActiveId != id)
-        {
-            if (!state) state = &g.InputTextState;  // Not sure about this, but, with recent ImGui changes, here I had state==NULL...
+        //if (g.ActiveId != id)   {
+            ImGuiInputTextState* state2 = &g.InputTextState;
+            if (state2) state = state2;  // Not sure about this, but, with recent ImGui changes, here I had state2==NULL...
+            IM_ASSERT(state);
+            state->CursorAnimReset();
 
             // Start edition
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
@@ -3956,21 +3968,37 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             }
             if (flags & ImGuiInputTextFlags_AlwaysOverwrite)
                 state->Stb.insert_mode = true;
-        }
+        //}
+    }
+
+    if (g.ActiveId != id && init_make_active)
+    {
+        //IM_ASSERT(state && state->ID == id);  // This asserts when e.g. it's inside an ImGui::TabWindow and I drag it to another window.
+        if (state->ID != id) state->ID = id;    // Wrong Hack! But it seems to work... (hope the old 'state->ID' is not something that should be 'disposed', 'garbage collected' or something like that!)
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
 
         //g.ActiveIdBlockNavInputFlags = (1 << ImGuiNavInput_Cancel);   // is this line necessary?
-    }
-    else if (io.MouseClicked[0])
-    {
-        // Release focus when we click outside
-        clear_active_id = true;
+        // Declare our inputs
+        IM_ASSERT(ImGuiNavInput_COUNT < 32);
+        g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
+        if (flags & ImGuiInputTextFlags_CallbackHistory)
+            g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+        g.ActiveIdUsingNavInputMask |= (1 << ImGuiNavInput_Cancel);
+        g.ActiveIdUsingKeyInputMask |= ((ImU64)1 << ImGuiKey_Home) | ((ImU64)1 << ImGuiKey_End);
+        g.ActiveIdUsingKeyInputMask |= ((ImU64)1 << ImGuiKey_PageUp) | ((ImU64)1 << ImGuiKey_PageDown);
+        if (flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_AllowTabInput))  // Disable keyboard tabbing out as we will use the \t character.
+            g.ActiveIdUsingKeyInputMask |= ((ImU64)1 << ImGuiKey_Tab);
     }
 
-    // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped)
-    if (g.ActiveId == id && state == NULL)   ClearActiveID();
+    // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped), clear id immediately (don't wait until the end of the function)
+    if (g.ActiveId == id && state == NULL)
+        ClearActiveID();
+
+    // Release focus when we click outside
+    if (g.ActiveId == id && io.MouseClicked[0] && !init_state && !init_make_active) //-V560
+        clear_active_id = true;
 
     bool value_changed = false;
     bool enter_pressed = false;
@@ -4108,7 +4136,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         const bool is_paste = ((is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_V)) || (is_shift_key_only && IsKeyPressedMap(ImGuiKey_Insert))) && !is_readonly;
 
         // We allow validate/cancel with Nav source (gamepad) to makes it easier to undo an accidental NavInput press with no keyboard wired, but otherwise it isn't very useful.
-        const bool is_validate_enter = IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_KeyPadEnter);
+        const bool is_validate_enter = IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_KeypadEnter);
         const bool is_validate_nav = (IsNavInputTest(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed) && !IsKeyPressedMap(ImGuiKey_Space)) || IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed);
         const bool is_cancel   = IsKeyPressedMap(ImGuiKey_Escape) || IsNavInputTest(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed);
 
@@ -4124,16 +4152,17 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             if (skipInitialTabs) {
                 int numTabs = 0;
                 int lineStart = state->Stb.cursor;
+                const ImWchar* buffer = state->TextW.Data;
                 while (--lineStart>0) {
-                    if (buf[lineStart]=='\n') {++lineStart;break;}
+                    if (buffer[lineStart]==L'\n') {++lineStart;break;}
                 }
-                while ((buf[lineStart]=='\t' || (buf[lineStart]==' ' && skipSpacesToo)) && (++lineStart)<=cursorStart) ++numTabs;
+                while ((buffer[lineStart]==L'\t' || (buffer[lineStart]==L' ' && skipSpacesToo)) && (++lineStart)<=cursorStart) ++numTabs;
                 if (lineStart==cursorStart) numTabs=0;  // Allows pressing ImGuiKey_Home twice to get to the start of the line
                 for (int i=0;i<numTabs;i++) state->OnKeyPressed(STB_TEXTEDIT_K_RIGHT);
             }
         }
         else if (IsKeyPressedMap(ImGuiKey_End))                         { state->OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Delete) && !is_readonly)       { state->OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
+        else if (IsKeyPressedMap(ImGuiKey_Delete) && !is_readonly && !is_cut)       { state->OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
         else if (IsKeyPressedMap(ImGuiKey_Backspace) && !is_readonly)    {
             if (!state->HasSelection())
             {
@@ -4153,14 +4182,22 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             {
                 const bool matchTabsInPreviousLine = true;  // if we want to match tabs from the previous line after this block...
                 int numTabs = 0;
+                const ImWchar* buffer = state->TextW.Data;   // We need this (state->Stb.cursor seems to be expressed in codepoints, not in bytes AFAICU...)
+                                                             // Using buffer = buf, or buffer = state->TextA.Data, doesn't work if even a single multibyte codepoint is entered before the cursor line (it still works for pure ASCII input texts).
+                                                             // ImWchar is an unsigned short (U16); or an unsigned int (U32) if IMGUI_USE_WCHAR32 is defined
+                                                             // Pure ASCII chars are kept as they are in U16 and U32 AFAICS (high-order bytes are 0)
+                IM_ASSERT(state->Stb.cursor<state->TextW.Size);  // optional
                 if (matchTabsInPreviousLine) {
                     int prevLineStart = state->Stb.cursor;
-                    while (--prevLineStart>0) {
-                        if (buf[prevLineStart]=='\n') {prevLineStart++;break;}
+                    if (prevLineStart>0 && buffer[prevLineStart-1]!=L'\n')  {
+                        while (--prevLineStart>0) {
+                            if (buffer[prevLineStart]==L'\n') {prevLineStart++;break;}
+                        }
+                        //fprintf(stderr,"state->Stb.cursor=%d prevLineStart=%d\n",state->Stb.cursor,prevLineStart);
+                        // count Tabs here:
+                        while (prevLineStart<=state->Stb.cursor && buffer[prevLineStart++]==L'\t') ++numTabs;  // Valgrind might warn: Invalid read size of 1 here (basically I don't know how to stop search at the beginning of the file)
+                        //fprintf(stderr,"numTabs=%d\n",numTabs);
                     }
-                    //fprintf(stderr,"state->Stb.cursor=%d prevLineStart=%d\n",state->Stb.cursor,prevLineStart);
-                    while (prevLineStart<=state->Stb.cursor && buf[prevLineStart++]=='\t') ++numTabs;  // Valgrind might warn: Invalid read size of 1 here (basically I don't know how to stop search at the beginning of the file)
-
                 }
 
                 unsigned int c = '\n'; // Insert new line
@@ -4324,7 +4361,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                     callback(&callback_data);
 
                     // Read back what user may have modified
-                    IM_ASSERT(callback_data.Buf == callback_buf);  // Invalid to modify those fields
+                    callback_buf = is_readonly ? buf : state->TextA.Data; // Pointer may have been invalidated by a resize callback
+                    IM_ASSERT(callback_data.Buf == callback_buf);         // Invalid to modify those fields
                     IM_ASSERT(callback_data.BufSize == state->BufCapacityA);
                     IM_ASSERT(callback_data.Flags == flags);
                     /*if (callback_data.CursorPos != utf8_cursor_pos)            { state->Stb.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos); state->CursorFollow = true; }
@@ -4397,6 +4435,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
     // Render frame
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 draw_pos = draw_window->DC.CursorPos;
+    ImVec2 text_size(0.0f, 0.0f);
 
     const bool canModifyText = g.ActiveId == id || (state != NULL && g.ActiveId == GetWindowScrollbarID(draw_window, ImGuiAxis_Y));
     ImVec2 cursor_offset(0,0),draw_scroll(0,0);
@@ -4416,8 +4455,8 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         {
             // Count lines + find lines numbers straddling 'cursor' and 'select_start' position.
             const ImWchar* searches_input_ptr[2];
-            searches_input_ptr[0] = text_begin + state->Stb.cursor;
-            searches_input_ptr[1] = NULL;
+            searches_input_ptr[0] = text_begin + state->Stb.cursor; // cursor
+            searches_input_ptr[1] = NULL;       // select_start
             int searches_remaining = 1;
             int searches_result_line_number[2] = { -1, -999 };
             if (state->HasSelection())
@@ -4452,7 +4491,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             }
 
             // Calculate text height
-            //text_size = ImVec2(size.x, line_count * textLineHeight);
+            text_size = ImVec2(inner_size.x, line_count * textLineHeight);
         }
 
         // Scroll
@@ -4487,8 +4526,13 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             float scroll_y = draw_window->Scroll.y;
             if (cursor_offset.y - textLineHeight < scroll_y)
                 scroll_y = ImMax(0.0f, cursor_offset.y - textLineHeight);
-            else if (cursor_offset.y - size.y >= scroll_y)
-                scroll_y = cursor_offset.y - size.y;
+            //else if (cursor_offset.y - size.y >= scroll_y)
+            //    scroll_y = cursor_offset.y - size.y;
+            else if (cursor_offset.y - (inner_size.y - style.FramePadding.y * 2.0f) >= scroll_y)
+                scroll_y = cursor_offset.y - inner_size.y + style.FramePadding.y * 2.0f;
+            const float scroll_max_y = ImMax((text_size.y + style.FramePadding.y * 2.0f) - inner_size.y, 0.0f);
+            scroll_y = ImClamp(scroll_y, 0.0f, scroll_max_y);
+
             //draw_window->DC.CursorPos.y += (draw_window->Scroll.y - scroll_y);   // To avoid a frame of lag
             draw_pos.y += (draw_window->Scroll.y - scroll_y);   // Manipulate cursor pos immediately avoid a frame of lag
             draw_window->Scroll.y = scroll_y;
@@ -4639,8 +4683,11 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(),GetColorU32(ceStyle.color_text));
 
         // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
-        if (!is_readonly)
-            g.PlatformImePos = ImVec2(cursor_screen_pos.x - 1.0f, cursor_screen_pos.y - g.FontSize);
+        if (!is_readonly)   {
+            g.PlatformImeData.WantVisible = true;
+            g.PlatformImeData.InputPos = ImVec2(cursor_screen_pos.x - 1.0f, cursor_screen_pos.y - g.FontSize);
+            g.PlatformImeData.InputLineHeight = g.FontSize;
+        }
 
     }
 
@@ -4651,7 +4698,12 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
 
     ImGui::Dummy(ImVec2(/*size.x*/langData.textSizeX,textLineHeight)); // Always add room to Y-scroll an extra line (we also make it "langData.textSizeX" wide to fix horizontal scrollbar
+    // For focus requests to work on our multiline we need to ensure our child ItemAdd() call specifies the ImGuiItemFlags_Inputable (ref issue #4761)...
+    ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;  // new (testing)
+    g.CurrentItemFlags |= ImGuiItemFlags_Inputable | ImGuiItemFlags_NoTabStop;         // new (testing)
     ImGui::EndChildFrame();
+    item_data_backup.StatusFlags |= (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HoveredWindow);  // new (testing)
+    g.CurrentItemFlags = backup_item_flags;                 // new (testing)
     //ImGui::EndGroup();
     ImGui::PopStyleColor();
     const ImVec2 endCursorPos = ImGui::GetCursorPos();
@@ -4677,7 +4729,7 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
             ImGui::PushStyleColor(ImGuiCol_FrameBg,r);
         }
         else ImGui::PushStyleColor(ImGuiCol_FrameBg,ceStyle.color_background);
-        //ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(style.WindowPadding.x,0.f));
+        //ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(style.WindowPadding.x,0.f)); // ImVec2(0,0));   // Ensure no clip rect so mouse hover can reach FramePadding edges
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,ImVec2(style.ItemSpacing.x,0.f));//style.ItemSpacing.y));
         if (!ImGui::BeginChildFrame(id*3, ImVec2(lineNumberSize,size.y),/*ImGuiWindowFlags_ForceHorizontalScrollbar|*/ImGuiWindowFlags_NoScrollbar))
         {
@@ -4710,13 +4762,26 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         ImGui::Dummy(ImVec2(lineNumberSize,textLineHeight)); // Always add room to Y-scroll an extra line (we also make it "langData.textSizeX" wide to fix horizontal scrollbar
         ImGui::PopFont();
         //--------------------------------------------------------
+        // For focus requests to work on our multiline we need to ensure our child ItemAdd() call specifies the ImGuiItemFlags_Inputable (ref issue #4761)...
+        //ImGuiItemFlags backup_item_flags = g.CurrentItemFlags;  // new (testing)
+        //g.CurrentItemFlags |= ImGuiItemFlags_Inputable | ImGuiItemFlags_NoTabStop;         // new (testing)
         ImGui::EndChildFrame();
+        //item_data_backup.StatusFlags |= (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HoveredWindow);    // new (testing)
+        //g.CurrentItemFlags = backup_item_flags;                 // new (testing)
         ImGui::PopStyleVar(1);
         ImGui::PopStyleColor();
         ImGui::SetCursorPos(endCursorPos);
     }
+    // ...and then we need to undo the group overriding last item data, which gets a bit messy as EndGroup() tries to forward scrollbar being active...
+    ImGuiLastItemData item_data = g.LastItemData;           // new (testing)
     ImGui::EndGroup();
+    if (g.LastItemData.ID == 0) {
+        g.LastItemData.ID = id;                             // new (testing)
+        g.LastItemData.InFlags = item_data_backup.InFlags;         // new (testing)
+        g.LastItemData.StatusFlags = item_data_backup.StatusFlags; // new (testing)
+    }
     //if (ImGui::IsItemHovered()) ImGui::SetTooltip("ScrollX = %1.2f",state->ScrollX);
+
 
     // Log as text
     if (g.LogEnabled)

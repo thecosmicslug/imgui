@@ -15,7 +15,6 @@
 					<Add option="-mwindows" />
 					<Add option="-DIMGUI_INCLUDE_IMGUI_USER_H" />
 					<Add option="-DIMGUI_INCLUDE_IMGUI_USER_INL" />
-					<Add option="-DIMIMPL_SHADER_GL3" />
 					<Add option="-DIMGUI_USE_DIRECT3D9_BINDING" />
 					<Add directory="../../" />
 				</Compiler>
@@ -37,6 +36,7 @@
 		<Unit filename="../../imgui.cpp" />
 		<Unit filename="../../imgui_demo.cpp" />
 		<Unit filename="../../imgui_draw.cpp" />
+		<Unit filename="../../imgui_tables.cpp" />		
 		<Unit filename="main.cpp">
 			<Option compilerVar="CC" />
 		</Unit>

@@ -1776,7 +1776,7 @@ struct TabWindowDragData {
     }
     inline static TabWindowNode* FindTabNodeByName(TabWindowNode* firstNode,const char* name,int numCharsToMatch=-1) {
         if ((numCharsToMatch==-1 && strcmp(firstNode->name,name)==0)
-            || (strncmp(firstNode->name,name,numCharsToMatch)==0)) return firstNode;
+            || (strncmp(firstNode->name,name,numCharsToMatch)==0)) return firstNode;    // in release mode I get the warning: 'specified bound 18446744073709551615 exceeds maximum object size 9223372036854775807 [-Wstringop-overflow=]'. Why? How can I fix it?
         TabWindowNode* rv = NULL;
         for (int i=0;i<2;i++)   {
             TabWindowNode* ch = firstNode->child[i];

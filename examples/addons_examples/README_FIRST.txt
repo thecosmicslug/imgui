@@ -33,8 +33,6 @@ and report the results here: https://github.com/Flix01/imgui/issues
 cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_GLUT_BINDING" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe glut32.lib glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With GLEW static only:
 cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GLEW" /D"GLEW_STATIC" /link /out:imgui_addons_example1.exe glew32s.lib opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
-# With bundled GL3W only (and using shaders from GL3: /D"IMIMPL_SHADER_GL3"):	-> This should work with no dependencies <-
-cl /O2 /MT /I"../../" /I"../libs/gl3w/" ../libs/gl3w/GL/gl3w.c ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_WINAPI_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /D"IMGUI_USE_GL3W" /D"IMIMPL_SHADER_GL3" /link /out:imgui_addons_example1.exe opengl32.lib gdi32.lib Shell32.lib user32.lib kernel32.lib
 # With DIRECT3D9:	-> This should work with no dependencies <-
 cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp /D"IMGUI_INCLUDE_IMGUI_USER_H" /D"IMGUI_INCLUDE_IMGUI_USER_INL" /D"IMGUI_USE_DIRECT3D9_BINDING" /D"WINVER=0x0501" /D"_WIN32_WINNT=0x0501" /link /out:imgui_addons_example1.exe d3d9.lib d3dx9.lib gdi32.lib Shell32.lib advapi32.lib user32.lib kernel32.lib
 # With GLFW3 + GLEW static:
@@ -42,13 +40,25 @@ cl /nologo /O2 /MT /I"../../" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_t
 # TODO: Add the last command-line for SDL2
 
 P.S. currently GLEW is required to compile all the Windows bindings except Direct3D9.
-UPDATE: Now GLEW can be optionally replaced by GLAD or by GL3W. The latter is already present in the repository,
-so that we have another Windows binding that should work without additional libraries.
+UPDATE: Now GLEW can be optionally replaced by GLAD or by GL3W.
 
 P.S.2: The order of the .cpp files is important! main.cpp must be the last of all the source files in the command line.
 
 NOTE: Even if recent versions of imgui include the file imgui_widgets.cpp, to compile the examples this file must be left out.
 NOTE2: More recent versions of Dear ImGui include the file imgui_tables.cpp. This must be added to your cpp files to compile the examples.
+
+---------------------
+NOTE FOR MINGW USERS:
+---------------------
+These mingw command lines have been tested on Ubuntu, to produce .exe files for Windows 64-bit:
+
+[The current directory must be: imgui/examples/addons_examples]
+# WIN32 OPENGL + GLEW (needs GLEW: please replace: "$INCLUDE_PATH" with the path to "GL/glew.h", and "$LIB_PATH" with the path to glew32.lib. Once compiled, it needs glew32.dll at runtime)
+x86_64-w64-mingw32-g++ -O2 -mwindows -I"$INCLUDE_PATH" ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp -o imgui_addons_example.exe -fexceptions -L"$LIB_PATH" -DIMGUI_INCLUDE_IMGUI_USER_H -DIMIMPL_SHADER_GL3 -DIMGUI_USE_WINAPI_BINDING -DIMGUI_USE_GLEW -DWINVER=0x0800 -D_WIN32 -D_WIN64 -I"." -I"../.." -static-libgcc -static-libstdc++ -lopengl32 -lglew32 -limm32 -luser32 -lkernel32 -s 
+# WIN32 DIRECT3D9 (no dependencies AFAIK)
+x86_64-w64-mingw32-g++ -O2 -mwindows ../../imgui.cpp ../../imgui_draw.cpp ../../imgui_tables.cpp ../../imgui_demo.cpp main.cpp -o imgui_addons_example.exe -fexceptions -DIMGUI_INCLUDE_IMGUI_USER_H -DIMGUI_USE_DIRECT3D9_BINDING -DWINVER=0x0800 -D_WIN32 -D_WIN64 -I"." -I"../.." -static-libgcc -static-libstdc++ -ld3d9 -ld3dx9 -lgdi32 -limm32 -lshell32 -ladvapi32 -luser32 -lkernel32 -s 
+
+To compile the second demo, simply replace main.cpp with main2.cpp, and imgui_addons_example.exe with imgui_addons_example2.exe (and optionally remove ../../imgui_demo.cpp).
 
 ====================================
 WHAT IS "IMGUI ADDONS" ?

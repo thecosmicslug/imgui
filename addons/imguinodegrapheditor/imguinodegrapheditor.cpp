@@ -1868,7 +1868,7 @@ template < int IMGUINODE_MAX_SLOTS > inline static int ProcessSlotNamesSeparated
         }
         if (tmp && Count<IMGUINODE_MAX_SLOTS)    {
             length = (int) strlen(tmp);if (length>=IMGUINODE_MAX_SLOT_NAME_LENGTH) length=IMGUINODE_MAX_SLOT_NAME_LENGTH-1;
-            strncpy(Names[Count],tmp, length);
+            strncpy(Names[Count],tmp, length);  // In release mode I get the warning: 'specified bound depends on the length of the source argument [-Wstringop-overflow=]'. How can I fix it?
             Names[Count][length] = '\0';
             ++Count;
         }

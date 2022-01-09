@@ -89,6 +89,14 @@ static bool DockWindowButton(bool* p_undocked,bool *p_open=NULL)
 
     return pressed;
 }
+/*static ImGuiCol GetDockWindowBgColorIdxFromFlags(ImGuiWindowFlags flags)
+{
+    if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
+        return ImGuiCol_PopupBg;
+    if (flags & ImGuiWindowFlags_ChildWindow)
+        return ImGuiCol_ChildBg;
+    return ImGuiCol_WindowBg;
+}*/
 static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, const ImVec2& size, float bg_alpha, ImGuiWindowFlags flags,bool* pDraggingStarted=NULL,ImGui::PanelManager::WindowData* wd=NULL)
 {
     ImGuiContext& g = *GImGui;
@@ -154,6 +162,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
     window_stack_data.StackSizesOnBegin.SetToCurrentState();
     g.CurrentWindowStack.push_back(window_stack_data);
     g.CurrentWindow = NULL;
+    if (flags & ImGuiWindowFlags_ChildMenu)
+           g.BeginMenuCount++;
 
     if (flags & ImGuiWindowFlags_Popup)
     {
@@ -209,7 +219,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
     // Default alpha
     //if (bg_alpha < 0.0f) bg_alpha = 0.7f;    //1.0f; //It was 0.7f (e.g. style.WindowFillAlphaDefault);
-    const ImGuiCol bg_color_idx = GetWindowBgColorIdxFromFlags(flags);
+    const ImGuiCol bg_color_idx = /*GetDockWindowBgColorIdxFromFlags(flags);*/GetWindowBgColorIdx(window);//GetDockWindowBgColorIdxFromFlags(flags);
     const ImVec4 bg_color_backup = g.Style.Colors[bg_color_idx];
     if (bg_alpha >= 0.0f) g.Style.Colors[bg_color_idx].w = bg_alpha;
 
@@ -502,9 +512,25 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 want_focus = true;
             else if ((flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) == 0)
                 want_focus = true;
+
+            ImGuiWindow* modal = GetTopMostPopupModal();
+            if (modal != NULL && !IsWindowWithinBeginStackOf(window, modal))
+            {
+                // Avoid focusing a window that is created outside of active modal. This will prevent active modal from being closed.
+                // Since window is not focused it would reappear at the same display position like the last time it was visible.
+                // In case of completely new windows it would go to the top (over current modal), but input to such window would still be blocked by modal.
+                // Position window behind a modal that is not a begin-parent of this window.
+                want_focus = false;
+                if (window == window->RootWindow)
+                {
+                    ImGuiWindow* blocking_modal = FindBlockingModal(window);
+                    IM_ASSERT(blocking_modal != NULL);
+                    BringWindowToDisplayBehind(window, blocking_modal);
+                }
+            }
         }
 
-        // Draw modal window background (darkens what is behind them, all viewports)
+        /*// Draw modal window background (darkens what is behind them, all viewports)
         const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetTopMostPopupModal() && window->HiddenFramesCannotSkipItems <= 0;
         const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && (window == g.NavWindowingTargetAnim->RootWindow);
         if (dim_bg_for_modal || dim_bg_for_window_list)
@@ -520,7 +546,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
              bb.Expand(g.FontSize);
              if (!bb.Contains(viewport_rect)) // Avoid drawing if the window covers all the viewport anyway
                 window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha * 0.25f), g.Style.WindowRounding);
-        }
+        }*/
+
 
         // Draw window + handle manual resize
         const ImGuiWindow* window_to_highlight = g.NavWindowingTarget ? g.NavWindowingTarget : g.NavWindow;
@@ -642,7 +669,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             // replacement
             if (!(flags & ImGuiWindowFlags_NoBackground))
             {
-                ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
+                ImU32 bg_col = /*GetColorU32(GetDockWindowBgColorIdxFromFlags(flags));*/GetColorU32(GetWindowBgColorIdx(window));
                 float alpha = 1.0f;
                 if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasBgAlpha)
                     alpha = g.NextWindowData.BgAlphaVal;
@@ -723,7 +750,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             //RenderOuterBorders(window);  // This should replace everything from '// Borders' to this line
         }
 
-        // Draw navigation selection/windowing rectangle border
+
+        /*// Draw navigation selection/windowing rectangle border
         if (g.NavWindowingTargetAnim == window)
         {
             float rounding = ImMax(window->WindowRounding, g.Style.WindowRounding);
@@ -735,7 +763,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
                 rounding = window->WindowRounding;
             }
             window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
-        }
+        }*/
+
 
         // Update ContentsRegionMax. All the variable it depends on are set above in this function.
         window->ContentRegionRect.Min.x = -window->Scroll.x + window->WindowPadding.x;
@@ -908,10 +937,12 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // We fill last item data based on Title Bar, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
         // This is useful to allow creating context menus on title bar only, etc.
-        g.LastItemData.ID = window->MoveId;
+        /*g.LastItemData.ID = window->MoveId;
         g.LastItemData.InFlags = g.CurrentItemFlags;    // new...
         g.LastItemData.StatusFlags = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
-        g.LastItemData.Rect = title_bar_rect;
+        g.LastItemData.Rect = title_bar_rect;*/
+        SetLastItemData(window->MoveId, g.CurrentItemFlags, IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0, title_bar_rect);
+
     }
 
     // Inner clipping rectangle
@@ -955,7 +986,8 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
             window->HiddenFramesCanSkipItems = 1;
 
         // Update the Hidden flag
-        window->Hidden = (window->HiddenFramesCanSkipItems > 0) || (window->HiddenFramesCannotSkipItems > 0);
+        bool hidden_regular = (window->HiddenFramesCanSkipItems > 0) || (window->HiddenFramesCannotSkipItems > 0);
+        window->Hidden = hidden_regular || (window->HiddenFramesForRenderOnly > 0);
 
         // Disable inputs for requested number of frames
         if (window->DisableInputsFrames > 0)
@@ -966,7 +998,7 @@ static bool DockWindowBegin(const char* name, bool* p_opened,bool* p_undocked, c
 
         // Update the SkipItems flag, used to early out of all items functions (no layout required)
         bool skip_items = false;
-        if (window->Collapsed || !window->Active || window->Hidden)
+        if (window->Collapsed || !window->Active || hidden_regular)
             if (window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && window->HiddenFramesCannotSkipItems <= 0)
                 skip_items = true;
         window->SkipItems = skip_items;
@@ -991,6 +1023,8 @@ static void DockWindowEnd()
 
     // Pop from window stack
     g.LastItemData = g.CurrentWindowStack.back().ParentLastItemDataBackup;
+    if (window->Flags & ImGuiWindowFlags_ChildMenu)
+            g.BeginMenuCount--;
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
     g.CurrentWindowStack.back().StackSizesOnBegin.CompareWithCurrentState();

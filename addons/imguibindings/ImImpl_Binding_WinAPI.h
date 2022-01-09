@@ -216,7 +216,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
     io.KeyMap[ImGuiKey_Space] = VK_SPACE;
 #   ifndef __EMSCRIPTEN__  // emscripten doesn't like it (and triggers a 'NewFrameSanityCheck' or something like that [But tested only with SDL2 binding, so it might work])
-    io.KeyMap[ImGuiKey_KeyPadEnter] = VK_RETURN;
+    io.KeyMap[ImGuiKey_KeypadEnter] = VK_RETURN;
 #   endif
 
     io.KeyMap[ImGuiKey_A] = 'A';
@@ -227,7 +227,8 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
     //io.RenderDrawListsFn = ImImpl_RenderDrawLists;
-    io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
+    //io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;    
+    io.ImeWindowHandle = window;   // Is this correct?
 
     // 3 common init steps
     InitImGuiFontTexture(pOptionalInitParams);

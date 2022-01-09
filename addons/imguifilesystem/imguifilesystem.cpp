@@ -451,7 +451,7 @@ public:
         static char tex2[MAX_PATH_BYTES];
 #   ifdef _WIN32
         while ((len = strlen(tex))>0 && tex[len-1]=='/') {
-            strncpy(tex2,tex,len+1);
+            strncpy(tex2,tex,len+1);    // In release mode I get the warning: 'specified bound depends on the length of the source argument [-Wstringop-overflow=]'. How can I fix it?
             String::Substr(tex2,tex,0,len-1);
         }
 #   endif //_WIN32

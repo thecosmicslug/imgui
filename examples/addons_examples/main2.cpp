@@ -302,6 +302,10 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
 
 
         }
+        else if (tab->matchLabel("Modifiers"))  {
+            static char buffer[2048] = "Example input text box.\n";
+            ImGui::InputTextMultiline("TextBox",buffer,2048);
+        }
         else if (tab->userInt>=500) {
 #       if (!defined(NO_IMGUICODEEDITOR) && !defined(NO_IMGUIFILESYSTEM))
             // This is simply an experimental mess!

@@ -1619,32 +1619,56 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glVertexAttribPointer(gImImplPrivateParams.attrLocUV, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (const void*)(0 + 8));
     glVertexAttribPointer(gImImplPrivateParams.attrLocColour, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (const void*)(0 + 16));
 
+    const GLenum GL_IMGUI_INDEX_BUFFER_TYPE = sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
     gImGuiNumTextureBindingsPerFrame = 0;
     GLuint lastTex = 0,tex=0;
     glBindTexture(GL_TEXTURE_2D, lastTex);
     for (int n = 0; n < draw_data->CmdListsCount; n++)  {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
-        const ImDrawIdx* idx_buffer_offset = 0;
+        //const ImDrawIdx* idx_buffer_offset = 0;
 
-        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)cmd_list->VtxBuffer.size() * sizeof(ImDrawVert), (GLvoid*)&cmd_list->VtxBuffer.front(), GL_STREAM_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx), (GLvoid*)&cmd_list->IdxBuffer.front(), GL_STREAM_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)cmd_list->VtxBuffer.size() * sizeof(ImDrawVert), (GLvoid*)cmd_list->VtxBuffer.Data, GL_STREAM_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx), (GLvoid*)cmd_list->IdxBuffer.Data, GL_STREAM_DRAW);
 
         //fprintf(stderr,"%d/%d) cmd_list->VtxBuffer.size() = %d",n+1,draw_data->CmdListsCount,cmd_list->VtxBuffer.size());
-        for (const ImDrawCmd* pcmd = cmd_list->CmdBuffer.begin(); pcmd != cmd_list->CmdBuffer.end(); pcmd++)    {
-            if (pcmd->UserCallback) pcmd->UserCallback(cmd_list, pcmd);
+        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)  {
+            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            if (pcmd->UserCallback) {
+                // TODO: Support ImDrawCallback_ResetRenderState ?
+                pcmd->UserCallback(cmd_list, pcmd);
+            }
             else    {
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y) continue;
+
+                // Apply scissor/clipping rectangle (Y is inverted in OpenGL)
+                glScissor((int)clip_min.x, (int)(fb_height - clip_max.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y));
+                //glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
+
+
                 tex = (GLuint)(intptr_t)pcmd->GetTexID();
                 if (tex!=lastTex)   {
                     glBindTexture(GL_TEXTURE_2D, tex);
                     lastTex = tex;
                     ++gImGuiNumTextureBindingsPerFrame;
                 }
-                glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
                 //fprintf(stderr,"    pcmd->ElemCount = %d    idx_buffer_offset = %d\n",pcmd->ElemCount,idx_buffer_offset);
-                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer_offset);
+                //glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer_offset);
+#               ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
+                //if (bd->GlVersion >= 320)
+                    glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
+                //else glDrawElements(GL_TRIANGLES,  (GLsizei)pcmd->ElemCount, GL_IMGUI_INDEX_BUFFER_TYPE,  (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
+#               else
+                glDrawElements(GL_TRIANGLES,  (GLsizei)pcmd->ElemCount, GL_IMGUI_INDEX_BUFFER_TYPE,  (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
+#               endif
             }
-            idx_buffer_offset += pcmd->ElemCount;
+            //idx_buffer_offset += pcmd->ElemCount;
         }
     }
 
@@ -1668,7 +1692,6 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 #else //IMIMPL_SHADER_NONE
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers.
-    GLint last_texture=0;
 #   ifdef IMGUIBINDINGS_RESTORE_GL_STATE
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
@@ -1691,12 +1714,17 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    glOrtho(0.0f, draw_data->DisplaySize.x, draw_data->DisplaySize.y, 0.0f, -1.0f, +1.0f);
+    glOrtho(draw_data->DisplayPos.x, draw_data->DisplayPos.x + draw_data->DisplaySize.x, draw_data->DisplayPos.y + draw_data->DisplaySize.y, draw_data->DisplayPos.y, -1.0f, +1.0f);
+    //glOrtho(0.0f, draw_data->DisplaySize.x, draw_data->DisplaySize.y, 0.0f, -1.0f, +1.0f);
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
 
     // Render command lists
+    const GLenum GL_IMGUI_INDEX_BUFFER_TYPE = sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
     gImGuiNumTextureBindingsPerFrame = 0;
     GLuint lastTex = 0,tex=0;
     glBindTexture(GL_TEXTURE_2D, lastTex);
@@ -1705,7 +1733,7 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
         const unsigned char* vtx_buffer = (const unsigned char*)&cmd_list->VtxBuffer.front();
-        const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer.front();
+        const ImDrawIdx* idx_buffer =  &cmd_list->IdxBuffer.front();
         glVertexPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, pos)));
         glTexCoordPointer(2, GL_FLOAT, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, uv)));
         glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(ImDrawVert), (void*)(vtx_buffer + OFFSETOF(ImDrawVert, col)));
@@ -1715,20 +1743,27 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
             {
+                // TODO: support ImDrawCallback_ResetRenderState ?
                 pcmd->UserCallback(cmd_list, pcmd);
             }
             else
             {
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)   continue;
+
+                // Apply scissor/clipping rectangle (Y is inverted in OpenGL)
+                glScissor((int)clip_min.x, (int)(fb_height - clip_max.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y));
+
                 tex = (GLuint)(intptr_t)pcmd->GetTexID();
                 if (tex!=lastTex)   {
                     glBindTexture(GL_TEXTURE_2D, tex);
                     lastTex = tex;
                     ++gImGuiNumTextureBindingsPerFrame;
                 }
-                glScissor((int)pcmd->ClipRect.x, (int)(fb_height - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
-                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, idx_buffer);
+                glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount,GL_IMGUI_INDEX_BUFFER_TYPE, idx_buffer + pcmd->IdxOffset);
             }
-            idx_buffer += pcmd->ElemCount;
         }
     }
     #undef OFFSETOF
@@ -1872,6 +1907,7 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
     //g_pd3dDevice->SetTexture(0, tex);     // Not sure this work with tex == NULL
     int vtx_offset = 0;
     int idx_offset = 0;
+    ImVec2 clip_off = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -1880,23 +1916,30 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
             {
+                // TODO: Support ImDrawCallback_ResetRenderState?
                 pcmd->UserCallback(cmd_list, pcmd);
             }
             else
             {
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
+                ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
+                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)   continue;
+
+                // Apply Scissor/clipping rectangle, Bind texture, Draw
+                const RECT r = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
                 tex = (LPDIRECT3DTEXTURE9)pcmd->GetTexID();
                 if (tex!=lastTex)   {
                     g_pd3dDevice->SetTexture( 0,  tex);
                     lastTex = tex;
                     ++gImGuiNumTextureBindingsPerFrame;
                 }
-                const RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
                 g_pd3dDevice->SetScissorRect( &r );
-                g_pd3dDevice->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.size(), idx_offset, pcmd->ElemCount/3 );
+                g_pd3dDevice->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, pcmd->VtxOffset + vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, pcmd->IdxOffset + idx_offset, pcmd->ElemCount/3);
             }
-            idx_offset += pcmd->ElemCount;
         }
-        vtx_offset += cmd_list->VtxBuffer.size();
+        idx_offset += cmd_list->IdxBuffer.Size;
+        vtx_offset += cmd_list->VtxBuffer.Size;
     }
 }
 
@@ -1905,7 +1948,6 @@ void ImImpl_RenderDrawLists(ImDrawData* draw_data)
 void ImImpl_NewFramePaused()    {
     // We use this method when ImGui is paused (= not displayed),
     // so that we can still process input using ImGui calls
-
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
     g.Time += g.IO.DeltaTime;
@@ -1921,6 +1963,68 @@ void ImImpl_NewFramePaused()    {
         g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
 
     // Update mouse inputs state
+#if 1
+    // cloned from imgui.cpp: static void ImGui::UpdateMouseInputs()
+    {
+        ImGuiContext& g = *GImGui;
+        ImGuiIO& io = g.IO;
+
+        // Round mouse position to avoid spreading non-rounded position (e.g. UpdateManualResize doesn't support them well)
+        if (ImGui::IsMousePosValid(&io.MousePos))
+            io.MousePos = g.MouseLastValidPos = ImFloor(io.MousePos);
+
+        // If mouse just appeared or disappeared (usually denoted by -FLT_MAX components) we cancel out movement in MouseDelta
+        if (ImGui::IsMousePosValid(&io.MousePos) && ImGui::IsMousePosValid(&io.MousePosPrev))
+            io.MouseDelta = io.MousePos - io.MousePosPrev;
+        else
+            io.MouseDelta = ImVec2(0.0f, 0.0f);
+
+        // If mouse moved we re-enable mouse hovering in case it was disabled by gamepad/keyboard. In theory should use a >0.0f threshold but would need to reset in everywhere we set this to true.
+        if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f)
+            g.NavDisableMouseHover = false;
+
+        io.MousePosPrev = io.MousePos;
+        for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+        {
+            io.MouseClicked[i] = io.MouseDown[i] && io.MouseDownDuration[i] < 0.0f;
+            io.MouseClickedCount[i] = 0; // Will be filled below
+            io.MouseReleased[i] = !io.MouseDown[i] && io.MouseDownDuration[i] >= 0.0f;
+            io.MouseDownDurationPrev[i] = io.MouseDownDuration[i];
+            io.MouseDownDuration[i] = io.MouseDown[i] ? (io.MouseDownDuration[i] < 0.0f ? 0.0f : io.MouseDownDuration[i] + io.DeltaTime) : -1.0f;
+            if (io.MouseClicked[i])
+            {
+                bool is_repeated_click = false;
+                if ((float)(g.Time - io.MouseClickedTime[i]) < io.MouseDoubleClickTime)
+                {
+                    ImVec2 delta_from_click_pos = ImGui::IsMousePosValid(&io.MousePos) ? (io.MousePos - io.MouseClickedPos[i]) : ImVec2(0.0f, 0.0f);
+                    if (ImLengthSqr(delta_from_click_pos) < io.MouseDoubleClickMaxDist * io.MouseDoubleClickMaxDist)
+                        is_repeated_click = true;
+                }
+                if (is_repeated_click)
+                    io.MouseClickedLastCount[i]++;
+                else
+                    io.MouseClickedLastCount[i] = 1;
+                io.MouseClickedTime[i] = g.Time;
+                io.MouseClickedPos[i] = io.MousePos;
+                io.MouseClickedCount[i] = io.MouseClickedLastCount[i];
+                io.MouseDragMaxDistanceSqr[i] = 0.0f;
+            }
+            else if (io.MouseDown[i])
+            {
+                // Maintain the maximum distance we reaching from the initial click position, which is used with dragging threshold
+                float delta_sqr_click_pos = ImGui::IsMousePosValid(&io.MousePos) ? ImLengthSqr(io.MousePos - io.MouseClickedPos[i]) : 0.0f;
+                io.MouseDragMaxDistanceSqr[i] = ImMax(io.MouseDragMaxDistanceSqr[i], delta_sqr_click_pos);
+            }
+
+            // We provide io.MouseDoubleClicked[] as a legacy service
+            io.MouseDoubleClicked[i] = (io.MouseClickedCount[i] == 2);
+
+            // Clicking any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
+            if (io.MouseClicked[i])
+                g.NavDisableMouseHover = false;
+        }
+    }
+#else
     // If mouse just appeared or disappeared (usually denoted by -FLT_MAX component, but in reality we test for -256000.0f) we cancel out movement in MouseDelta
     if (ImGui::IsMousePosValid(&g.IO.MousePos) && ImGui::IsMousePosValid(&g.IO.MousePosPrev)) g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
     else g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
@@ -1961,6 +2065,7 @@ void ImImpl_NewFramePaused()    {
             g.IO.MouseDragMaxDistanceSqr[i] = ImMax(g.IO.MouseDragMaxDistanceSqr[i], ImLengthSqr(mouse_delta));
         }
     }
+#endif
 
     // Calculate frame-rate for the user, as a purely luxurious feature
     g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];
