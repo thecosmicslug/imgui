@@ -18,6 +18,10 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
+//  2022-01-17: Inputs: always calling io.AddKeyModsEvent() next and before key event (not in NewFrame) to fix input queue with very low framerates.
+//  2022-01-12: Update mouse inputs using SDL_MOUSEMOTION/SDL_WINDOWEVENT_LEAVE + fallback to provide it when focused but not hovered/captured. More standard and will allow us to pass it to future input queue API.
+//  2022-01-12: Maintain our own copy of MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-08-17: Calling io.AddFocusEvent() on SDL_WINDOWEVENT_FOCUS_GAINED/SDL_WINDOWEVENT_FOCUS_LOST.
 //  2021-07-29: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using SDL_GetMouseFocus() + SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, requires SDL 2.0.5+)
@@ -74,7 +78,7 @@ struct ImGui_ImplSDL2_Data
 {
     SDL_Window* Window;
     Uint64      Time;
-    bool        MousePressed[3];
+    int         MouseButtonsDown;
     SDL_Cursor* MouseCursors[ImGuiMouseCursor_COUNT];
     char*       ClipboardTextData;
     bool        MouseCanUseGlobalState;
@@ -158,12 +162,12 @@ static ImGuiKey ImGui_ImplSDL2_KeycodeToImGuiKey(int keycode)
         case SDLK_KP_PLUS: return ImGuiKey_KeypadAdd;
         case SDLK_KP_ENTER: return ImGuiKey_KeypadEnter;
         case SDLK_KP_EQUALS: return ImGuiKey_KeypadEqual;
+        case SDLK_LCTRL: return ImGuiKey_LeftCtrl;
         case SDLK_LSHIFT: return ImGuiKey_LeftShift;
-        case SDLK_LCTRL: return ImGuiKey_LeftControl;
         case SDLK_LALT: return ImGuiKey_LeftAlt;
         case SDLK_LGUI: return ImGuiKey_LeftSuper;
+        case SDLK_RCTRL: return ImGuiKey_RightCtrl;
         case SDLK_RSHIFT: return ImGuiKey_RightShift;
-        case SDLK_RCTRL: return ImGuiKey_RightControl;
         case SDLK_RALT: return ImGuiKey_RightAlt;
         case SDLK_RGUI: return ImGuiKey_RightSuper;
         case SDLK_MENU: return ImGuiKey_Menu;
@@ -219,6 +223,17 @@ static ImGuiKey ImGui_ImplSDL2_KeycodeToImGuiKey(int keycode)
     return ImGuiKey_None;
 }
 
+static void ImGui_ImplSDL2_UpdateKeyModifiers(SDL_Keymod sdl_key_mods)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiKeyModFlags key_mods =
+        ((sdl_key_mods & KMOD_CTRL) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((sdl_key_mods & KMOD_SHIFT) ? ImGuiKeyModFlags_Shift : 0) |
+        ((sdl_key_mods & KMOD_ALT) ? ImGuiKeyModFlags_Alt : 0) |
+        ((sdl_key_mods & KMOD_GUI) ? ImGuiKeyModFlags_Super : 0);
+    io.AddKeyModsEvent(key_mods);
+}
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -231,36 +246,49 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
 
     switch (event->type)
     {
-    case SDL_MOUSEWHEEL:
+        case SDL_MOUSEMOTION:
         {
-            if (event->wheel.x > 0) io.MouseWheelH += 1;
-            if (event->wheel.x < 0) io.MouseWheelH -= 1;
-            if (event->wheel.y > 0) io.MouseWheel += 1;
-            if (event->wheel.y < 0) io.MouseWheel -= 1;
+            io.AddMousePosEvent((float)event->motion.x, (float)event->motion.y);
             return true;
         }
-    case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEWHEEL:
         {
-            if (event->button.button == SDL_BUTTON_LEFT) { bd->MousePressed[0] = true; }
-            if (event->button.button == SDL_BUTTON_RIGHT) { bd->MousePressed[1] = true; }
-            if (event->button.button == SDL_BUTTON_MIDDLE) { bd->MousePressed[2] = true; }
+            float wheel_x = (event->wheel.x > 0) ? 1.0f : (event->wheel.x < 0) ? -1.0f : 0.0f;
+            float wheel_y = (event->wheel.y > 0) ? 1.0f : (event->wheel.y < 0) ? -1.0f : 0.0f;
+            io.AddMouseWheelEvent(wheel_x, wheel_y);
             return true;
         }
-    case SDL_TEXTINPUT:
+        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONUP:
+        {
+            int mouse_button = -1;
+            if (event->button.button == SDL_BUTTON_LEFT) { mouse_button = 0; }
+            if (event->button.button == SDL_BUTTON_RIGHT) { mouse_button = 1; }
+            if (event->button.button == SDL_BUTTON_MIDDLE) { mouse_button = 2; }
+            if (mouse_button == -1)
+                break;
+            io.AddMouseButtonEvent(mouse_button, (event->type == SDL_MOUSEBUTTONDOWN));
+            bd->MouseButtonsDown = (event->type == SDL_MOUSEBUTTONDOWN) ? (bd->MouseButtonsDown | (1 << mouse_button)) : (bd->MouseButtonsDown & ~(1 << mouse_button));
+            return true;
+        }
+        case SDL_TEXTINPUT:
         {
             io.AddInputCharactersUTF8(event->text.text);
             return true;
         }
-    case SDL_KEYDOWN:
-    case SDL_KEYUP:
+        case SDL_KEYDOWN:
+        case SDL_KEYUP:
         {
+            ImGui_ImplSDL2_UpdateKeyModifiers((SDL_Keymod)event->key.keysym.mod);
             ImGuiKey key = ImGui_ImplSDL2_KeycodeToImGuiKey(event->key.keysym.sym);
             io.AddKeyEvent(key, (event->type == SDL_KEYDOWN));
             io.SetKeyEventNativeData(key, event->key.keysym.sym, event->key.keysym.scancode, event->key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
             return true;
         }
-    case SDL_WINDOWEVENT:
+        case SDL_WINDOWEVENT:
         {
+            if (event->window.event == SDL_WINDOWEVENT_LEAVE)
+                io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
             if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
                 io.AddFocusEvent(true);
             else if (event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
@@ -382,60 +410,34 @@ void ImGui_ImplSDL2_Shutdown()
     IM_DELETE(bd);
 }
 
-static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
+static void ImGui_ImplSDL2_UpdateMouseData()
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
 
-    ImVec2 mouse_pos_prev = io.MousePos;
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-
-    // Update mouse buttons
-    int mouse_x_local, mouse_y_local;
-    Uint32 mouse_buttons = SDL_GetMouseState(&mouse_x_local, &mouse_y_local);
-    io.MouseDown[0] = bd->MousePressed[0] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = bd->MousePressed[1] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
-    io.MouseDown[2] = bd->MousePressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
-    bd->MousePressed[0] = bd->MousePressed[1] = bd->MousePressed[2] = false;
-
-    // Obtain focused and hovered window. We forward mouse input when focused or when hovered (and no other window is capturing)
+    // We forward mouse input when hovered or captured (via SDL_MOUSEMOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
-    SDL_Window* focused_window = SDL_GetKeyboardFocus();
-    SDL_Window* hovered_window = SDL_HAS_MOUSE_FOCUS_CLICKTHROUGH ? SDL_GetMouseFocus() : NULL; // This is better but is only reliably useful with SDL 2.0.5+ and SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH.
-    SDL_Window* mouse_window = NULL;
-    if (hovered_window && bd->Window == hovered_window)
-        mouse_window = hovered_window;
-    else if (focused_window && bd->Window == focused_window)
-        mouse_window = focused_window;
-
     // SDL_CaptureMouse() let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't e.g. trigger other operations outside
-    SDL_CaptureMouse(ImGui::IsAnyMouseDown() ? SDL_TRUE : SDL_FALSE);
+    SDL_CaptureMouse(bd->MouseButtonsDown != 0 ? SDL_TRUE : SDL_FALSE);
+    SDL_Window* focused_window = SDL_GetKeyboardFocus();
+    const bool is_app_focused = (bd->Window == focused_window);
 #else
-    // SDL 2.0.3 and non-windowed systems: single-viewport only
-    SDL_Window* mouse_window = (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_INPUT_FOCUS) ? bd->Window : NULL;
+    const bool is_app_focused = (SDL_GetWindowFlags(bd->Window) & SDL_WINDOW_INPUT_FOCUS) != 0; // SDL 2.0.3 and non-windowed systems: single-viewport only
 #endif
-
-    if (mouse_window == NULL)
-       return;
-
-    // Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
-    if (io.WantSetMousePos)
-        SDL_WarpMouseInWindow(bd->Window, (int)mouse_pos_prev.x, (int)mouse_pos_prev.y);
-
-    // Set Dear ImGui mouse position from OS position + get buttons. (this is the common behavior)
-    if (bd->MouseCanUseGlobalState)
+    if (is_app_focused)
     {
-        // Single-viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
-        // Unlike local position obtained earlier this will be valid when straying out of bounds.
-        int mouse_x_global, mouse_y_global;
-        SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
-        int window_x, window_y;
-        SDL_GetWindowPosition(mouse_window, &window_x, &window_y);
-        io.MousePos = ImVec2((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
-    }
-    else
-    {
-        io.MousePos = ImVec2((float)mouse_x_local, (float)mouse_y_local);
+        // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+        if (io.WantSetMousePos)
+            SDL_WarpMouseInWindow(bd->Window, (int)io.MousePos.x, (int)io.MousePos.y);
+
+        // (Optional) Fallback to provide mouse position when focused (SDL_MOUSEMOTION already provides this when hovered or captured)
+        if (bd->MouseCanUseGlobalState && bd->MouseButtonsDown == 0)
+        {
+            int window_x, window_y, mouse_x_global, mouse_y_global;
+            SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
+            SDL_GetWindowPosition(bd->Window, &window_x, &window_y);
+            io.AddMousePosEvent((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
+        }
     }
 }
 
@@ -501,18 +503,6 @@ static void ImGui_ImplSDL2_UpdateGamepads()
     #undef MAP_ANALOG
 }
 
-static void ImGui_ImplSDL2_UpdateKeyModifiers()
-{
-    ImGuiIO& io = ImGui::GetIO();
-    SDL_Keymod sdl_key_mods = SDL_GetModState();
-    ImGuiKeyModFlags key_mods =
-        ((sdl_key_mods & KMOD_CTRL) ? ImGuiKeyModFlags_Ctrl : 0) |
-        ((sdl_key_mods & KMOD_SHIFT) ? ImGuiKeyModFlags_Shift : 0) |
-        ((sdl_key_mods & KMOD_ALT) ? ImGuiKeyModFlags_Alt : 0) |
-        ((sdl_key_mods & KMOD_GUI) ? ImGuiKeyModFlags_Super : 0);
-    io.AddKeyModsEvent(key_mods);
-}
-
 void ImGui_ImplSDL2_NewFrame()
 {
     ImGui_ImplSDL2_Data* bd = ImGui_ImplSDL2_GetBackendData();
@@ -536,10 +526,7 @@ void ImGui_ImplSDL2_NewFrame()
     io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / frequency) : (float)(1.0f / 60.0f);
     bd->Time = current_time;
 
-    // Update key modifiers
-    ImGui_ImplSDL2_UpdateKeyModifiers();
-
-    ImGui_ImplSDL2_UpdateMousePosAndButtons();
+    ImGui_ImplSDL2_UpdateMouseData();
     ImGui_ImplSDL2_UpdateMouseCursor();
 
     // Update game controllers (if enabled and available)

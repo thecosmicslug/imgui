@@ -92,6 +92,7 @@ Index of this file:
 
 // Visual Studio warnings
 #ifdef _MSC_VER
+#pragma warning (disable: 4127)     // condition expression is constant
 #pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #pragma warning (disable: 26451)    // [Static Analyzer] Arithmetic overflow : Using operator 'xxx' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator 'xxx' to avoid overflow(io.2).
 #endif
@@ -459,8 +460,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
             }
             ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", &io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
             ImGui::SameLine(); HelpMarker("Instruct backend to not alter mouse cursor shape and visibility.");
+            ImGui::Checkbox("io.ConfigInputEventQueue", &io.ConfigInputEventQueue);
+            ImGui::SameLine(); HelpMarker("Enable input queue trickling: some types of events submitted during the same frame (e.g. button down + up) will be spread over multiple frames, improving interactions with low framerates.");
             ImGui::Checkbox("io.ConfigInputTextCursorBlink", &io.ConfigInputTextCursorBlink);
-            ImGui::SameLine(); HelpMarker("Enable blinking cursor (optional as some users consider it to be distracting)");
+            ImGui::SameLine(); HelpMarker("Enable blinking cursor (optional as some users consider it to be distracting).");
             ImGui::Checkbox("io.ConfigDragClickToInputText", &io.ConfigDragClickToInputText);
             ImGui::SameLine(); HelpMarker("Enable turning DragXXX widgets into text input with a simple mouse click-release (without moving).");
             ImGui::Checkbox("io.ConfigWindowsResizeFromEdges", &io.ConfigWindowsResizeFromEdges);
@@ -5997,7 +6000,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
 namespace ImGui { IMGUI_API void ShowFontAtlas(ImFontAtlas* atlas); }
 
 // Demo helper function to select among loaded fonts.
-// Here we use the regular BeginCombo()/EndCombo() api which is more the more flexible one.
+// Here we use the regular BeginCombo()/EndCombo() api which is the more flexible one.
 void ImGui::ShowFontSelector(const char* label)
 {
     ImGuiIO& io = ImGui::GetIO();

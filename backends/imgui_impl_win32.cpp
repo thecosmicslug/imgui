@@ -18,6 +18,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#include <windowsx.h> // GET_X_LPARAM(), GET_Y_LPARAM()
 #include <tchar.h>
 #include <dwmapi.h>
 
@@ -33,6 +34,10 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
+//  2022-01-17: Inputs: always calling io.AddKeyModsEvent() next and before a key event (not in NewFrame) to fix input queue with very low framerates.
+//  2022-01-12: Inputs: Update mouse inputs using WM_MOUSEMOVE/WM_MOUSELEAVE + fallback to provide it when focused but not hovered/captured. More standard and will allow us to pass it to future input queue API.
+//  2022-01-12: Inputs: Maintain our own copy of MouseButtonsDown mask instead of using ImGui::IsAnyMouseDown() which will be obsoleted.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-16: Inputs: Fill VK_LCONTROL/VK_RCONTROL/VK_LSHIFT/VK_RSHIFT/VK_LMENU/VK_RMENU for completeness.
 //  2021-08-17: Calling io.AddFocusEvent() on WM_SETFOCUS/WM_KILLFOCUS messages.
@@ -74,6 +79,7 @@ struct ImGui_ImplWin32_Data
     HWND                        hWnd;
     HWND                        MouseHwnd;
     bool                        MouseTracked;
+    int                         MouseButtonsDown;
     INT64                       Time;
     INT64                       TicksPerSecond;
     ImGuiMouseCursor            LastMouseCursor;
@@ -231,45 +237,38 @@ static void ImGui_ImplWin32_UpdateKeyModifiers()
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGuiKeyModFlags key_mods =
-        ((IsVkDown(VK_LCONTROL) || IsVkDown(VK_RCONTROL)) ? ImGuiKeyModFlags_Ctrl : 0) |
-        ((IsVkDown(VK_LSHIFT) || IsVkDown(VK_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
-        ((IsVkDown(VK_LMENU) || IsVkDown(VK_RMENU)) ? ImGuiKeyModFlags_Alt : 0) |
-        ((IsVkDown(VK_LWIN) || IsVkDown(VK_RWIN)) ? ImGuiKeyModFlags_Super : 0);
+        ((IsVkDown(VK_CONTROL)) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((IsVkDown(VK_SHIFT) ) ? ImGuiKeyModFlags_Shift : 0) |
+        ((IsVkDown(VK_MENU)) ? ImGuiKeyModFlags_Alt : 0) |
+        ((IsVkDown(VK_APPS)) ? ImGuiKeyModFlags_Super : 0);
     io.AddKeyModsEvent(key_mods);
 }
 
-static void ImGui_ImplWin32_UpdateMousePos()
+static void ImGui_ImplWin32_UpdateMouseData()
 {
     ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(bd->hWnd != 0);
 
-    const ImVec2 mouse_pos_prev = io.MousePos;
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-
-    // Obtain focused and hovered window. We forward mouse input when focused or when hovered (and no other window is capturing)
-    HWND focused_window = ::GetForegroundWindow();
-    HWND hovered_window = bd->MouseHwnd;
-    HWND mouse_window = NULL;
-    if (hovered_window && (hovered_window == bd->hWnd || ::IsChild(hovered_window, bd->hWnd)))
-        mouse_window = hovered_window;
-    else if (focused_window && (focused_window == bd->hWnd || ::IsChild(focused_window, bd->hWnd)))
-        mouse_window = focused_window;
-    if (mouse_window == NULL)
-        return;
-
-    // Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
-    if (io.WantSetMousePos)
+    const bool is_app_focused = (::GetForegroundWindow() == bd->hWnd);
+    if (is_app_focused)
     {
-        POINT pos = { (int)mouse_pos_prev.x, (int)mouse_pos_prev.y };
-        if (::ClientToScreen(bd->hWnd, &pos))
-            ::SetCursorPos(pos.x, pos.y);
-    }
+        // (Optional) Set OS mouse position from Dear ImGui if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+        if (io.WantSetMousePos)
+        {
+            POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+            if (::ClientToScreen(bd->hWnd, &pos))
+                ::SetCursorPos(pos.x, pos.y);
+        }
 
-    // Set Dear ImGui mouse position from OS position
-    POINT pos;
-    if (::GetCursorPos(&pos) && ::ScreenToClient(mouse_window, &pos))
-        io.MousePos = ImVec2((float)pos.x, (float)pos.y);
+        // (Optional) Fallback to provide mouse position when focused (WM_MOUSEMOVE already provides this when hovered or captured)
+        if (!io.WantSetMousePos && !bd->MouseTracked)
+        {
+            POINT pos;
+            if (::GetCursorPos(&pos) && ::ScreenToClient(bd->hWnd, &pos))
+                io.AddMousePosEvent((float)pos.x, (float)pos.y);
+        }
+    }
 }
 
 // Gamepad navigation mapping
@@ -339,14 +338,11 @@ void    ImGui_ImplWin32_NewFrame()
     io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
     bd->Time = current_time;
 
+    // Update OS mouse position
+    ImGui_ImplWin32_UpdateMouseData();
+
     // Process workarounds for known Windows key handling issues
     ImGui_ImplWin32_ProcessKeyEventsWorkarounds();
-
-    // Update key modifiers
-    ImGui_ImplWin32_UpdateKeyModifiers();
-
-    // Update OS mouse position
-    ImGui_ImplWin32_UpdateMousePos();
 
     // Update OS mouse cursor with the cursor requested by imgui
     ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
@@ -416,11 +412,11 @@ static ImGuiKey ImGui_ImplWin32_VirtualKeyToImGuiKey(WPARAM wParam)
         case VK_ADD: return ImGuiKey_KeypadAdd;
         case IM_VK_KEYPAD_ENTER: return ImGuiKey_KeypadEnter;
         case VK_LSHIFT: return ImGuiKey_LeftShift;
-        case VK_LCONTROL: return ImGuiKey_LeftControl;
+        case VK_LCONTROL: return ImGuiKey_LeftCtrl;
         case VK_LMENU: return ImGuiKey_LeftAlt;
         case VK_LWIN: return ImGuiKey_LeftSuper;
         case VK_RSHIFT: return ImGuiKey_RightShift;
-        case VK_RCONTROL: return ImGuiKey_RightControl;
+        case VK_RCONTROL: return ImGuiKey_RightCtrl;
         case VK_RMENU: return ImGuiKey_RightAlt;
         case VK_RWIN: return ImGuiKey_RightSuper;
         case VK_APPS: return ImGuiKey_Menu;
@@ -515,11 +511,13 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
             ::TrackMouseEvent(&tme);
             bd->MouseTracked = true;
         }
+        io.AddMousePosEvent((float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam));
         break;
     case WM_MOUSELEAVE:
         if (bd->MouseHwnd == hwnd)
             bd->MouseHwnd = NULL;
         bd->MouseTracked = false;
+        io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
         break;
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
     case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
@@ -531,9 +529,10 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) { button = 1; }
         if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) { button = 2; }
         if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
-        if (!ImGui::IsAnyMouseDown() && ::GetCapture() == NULL)
+        if (bd->MouseButtonsDown == 0 && ::GetCapture() == NULL)
             ::SetCapture(hwnd);
-        io.MouseDown[button] = true;
+        bd->MouseButtonsDown |= 1 << button;
+        io.AddMouseButtonEvent(button, true);
         return 0;
     }
     case WM_LBUTTONUP:
@@ -546,16 +545,17 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (msg == WM_RBUTTONUP) { button = 1; }
         if (msg == WM_MBUTTONUP) { button = 2; }
         if (msg == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
-        io.MouseDown[button] = false;
-        if (!ImGui::IsAnyMouseDown() && ::GetCapture() == hwnd)
+        bd->MouseButtonsDown &= ~(1 << button);
+        if (bd->MouseButtonsDown == 0 && ::GetCapture() == hwnd)
             ::ReleaseCapture();
+        io.AddMouseButtonEvent(button, false);
         return 0;
     }
     case WM_MOUSEWHEEL:
-        io.MouseWheel += (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+        io.AddMouseWheelEvent(0.0f, (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA);
         return 0;
     case WM_MOUSEHWHEEL:
-        io.MouseWheelH += (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+        io.AddMouseWheelEvent((float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA, 0.0f);
         return 0;
     case WM_KEYDOWN:
     case WM_KEYUP:
@@ -563,9 +563,11 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_SYSKEYUP:
     {
         const bool is_key_down = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
-
         if (wParam < 256)
         {
+            // Submit modifiers
+            ImGui_ImplWin32_UpdateKeyModifiers();
+
             // Obtain virtual key code
             // (keypad enter doesn't have its own... VK_RETURN with KF_EXTENDED flag means keypad enter, see IM_VK_KEYPAD_ENTER definition for details, it is mapped to ImGuiKey_KeyPadEnter.)
             int vk = (int)wParam;
@@ -587,8 +589,8 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
             }
             else if (vk == VK_CONTROL)
             {
-                if (IsVkDown(VK_LCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftControl, is_key_down, VK_LCONTROL, scancode); }
-                if (IsVkDown(VK_RCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightControl, is_key_down, VK_RCONTROL, scancode); }
+                if (IsVkDown(VK_LCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_LeftCtrl, is_key_down, VK_LCONTROL, scancode); }
+                if (IsVkDown(VK_RCONTROL) == is_key_down) { ImGui_ImplWin32_AddKeyEvent(ImGuiKey_RightCtrl, is_key_down, VK_RCONTROL, scancode); }
             }
             else if (vk == VK_MENU)
             {

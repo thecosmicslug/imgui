@@ -7,6 +7,7 @@
 //  [X] Platform: Keyboard support. Since 1.87 we are using the io.AddKeyEvent() function. Pass ImGuiKey values to all key functions e.g. ImGui::IsKeyPressed(ImGuiKey_Space). [Legacy kVK_* values will also be supported unless IMGUI_DISABLE_OBSOLETE_KEYIO is set]
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this backend).
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
+//  [X] Platform: IME support.
 
 // You can use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // Prefer including the entire imgui/ repository into your project (either as a copy or as a submodule), and only build the backends you need.
@@ -22,6 +23,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2022-01-17: Inputs: calling new io.AddMousePosEvent(), io.AddMouseButtonEvent(), io.AddMouseWheelEvent() API (1.87+).
+//  2022-01-12: Inputs: Added basic Platform IME support, hooking the io.SetPlatformImeDataFn() function.
 //  2022-01-10: Inputs: calling new io.AddKeyEvent(), io.AddKeyModsEvent() + io.SetKeyEventNativeData() API (1.87+). Support for full ImGuiKey range.
 //  2021-12-13: *BREAKING CHANGE* Add NSView parameter to ImGui_ImplOSX_Init(). Generally fix keyboard support. Using kVK_* codes for keyboard keys.
 //  2021-12-13: Add game controller support.
@@ -49,11 +52,9 @@ static double               g_HostClockPeriod = 0.0;
 static double               g_Time = 0.0;
 static NSCursor*            g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool                 g_MouseCursorHidden = false;
-static bool                 g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
-static bool                 g_MouseDown[ImGuiMouseButton_COUNT] = {};
-static ImGuiKeyModFlags     g_KeyModifiers = ImGuiKeyModFlags_None;
 static ImFocusObserver*     g_FocusObserver = nil;
 static KeyEventResponder*   g_KeyEventResponder = nil;
+static NSTextInputContext*  g_InputContext = nil;
 
 // Undocumented methods for creating cursors.
 @interface NSCursor()
@@ -91,6 +92,29 @@ static double GetMachAbsoluteTimeInSeconds()
 @end
 
 @implementation KeyEventResponder
+{
+    float _posX;
+    float _posY;
+    NSRect _imeRect;
+}
+
+#pragma mark - Public
+
+- (void)setImePosX:(float)posX imePosY:(float)posY
+{
+    _posX = posX;
+    _posY = posY;
+}
+
+- (void)updateImePosWithView:(NSView *)view
+{
+    NSWindow *window = view.window;
+    if (!window)
+        return;
+    NSRect contentRect = [window contentRectForFrameRect:window.frame];
+    NSRect rect = NSMakeRect(_posX, contentRect.size.height - _posY, 0, 0);
+    _imeRect = [window convertRectToScreen:rect];
+}
 
 - (void)viewDidMoveToWindow
 {
@@ -145,7 +169,7 @@ static double GetMachAbsoluteTimeInSeconds()
 
 - (NSRect)firstRectForCharacterRange:(NSRange)range actualRange:(nullable NSRangePointer)actualRange
 {
-    return NSZeroRect;
+    return _imeRect;
 }
 
 - (BOOL)hasMarkedText
@@ -276,15 +300,15 @@ static ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code)
         case kVK_Space: return ImGuiKey_Space;
         case kVK_Delete: return ImGuiKey_Backspace;
         case kVK_Escape: return ImGuiKey_Escape;
-        case kVK_Command: return ImGuiKey_LeftSuper;
-        case kVK_Shift: return ImGuiKey_LeftShift;
         case kVK_CapsLock: return ImGuiKey_CapsLock;
+        case kVK_Control: return ImGuiKey_LeftCtrl;
+        case kVK_Shift: return ImGuiKey_LeftShift;
         case kVK_Option: return ImGuiKey_LeftAlt;
-        case kVK_Control: return ImGuiKey_LeftControl;
-        case kVK_RightCommand: return ImGuiKey_RightSuper;
+        case kVK_Command: return ImGuiKey_LeftSuper;
+        case kVK_RightControl: return ImGuiKey_RightCtrl;
         case kVK_RightShift: return ImGuiKey_RightShift;
         case kVK_RightOption: return ImGuiKey_RightAlt;
-        case kVK_RightControl: return ImGuiKey_RightControl;
+        case kVK_RightCommand: return ImGuiKey_RightSuper;
 //      case kVK_Function: return ImGuiKey_;
 //      case kVK_F17: return ImGuiKey_;
 //      case kVK_VolumeUp: return ImGuiKey_;
@@ -390,6 +414,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     // Add the NSTextInputClient to the view hierarchy,
     // to receive keyboard events and translate them to input text.
     g_KeyEventResponder = [[KeyEventResponder alloc] initWithFrame:NSZeroRect];
+    g_InputContext = [[NSTextInputContext alloc] initWithClient:g_KeyEventResponder];
     [view addSubview:g_KeyEventResponder];
 
     // Some events do not raise callbacks of AppView in some circumstances (for example when CMD key is held down).
@@ -401,6 +426,21 @@ bool ImGui_ImplOSX_Init(NSView* view)
         return event;
     }];
 
+    io.SetPlatformImeDataFn = [](ImGuiViewport* viewport, ImGuiPlatformImeData* data) -> void
+    {
+        if (data->WantVisible)
+        {
+            [g_InputContext activate];
+        }
+        else
+        {
+            [g_InputContext discardMarkedText];
+            [g_InputContext invalidateCharacterCoordinates];
+            [g_InputContext deactivate];
+        }
+        [g_KeyEventResponder setImePosX:data->InputPos.x imePosY:data->InputPos.y + data->InputLineHeight];
+    };
+
     return true;
 }
 
@@ -409,17 +449,9 @@ void ImGui_ImplOSX_Shutdown()
     g_FocusObserver = NULL;
 }
 
-static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
+static void ImGui_ImplOSX_UpdateMouseCursor()
 {
-    // Update buttons
     ImGuiIO& io = ImGui::GetIO();
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
-    {
-        // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        io.MouseDown[i] = g_MouseJustPressed[i] || g_MouseDown[i];
-        g_MouseJustPressed[i] = false;
-    }
-
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
         return;
 
@@ -481,8 +513,8 @@ static void ImGui_ImplOSX_UpdateGamepads()
     MAP_BUTTON(ImGuiNavInput_DpadDown, dpad.down);
     MAP_BUTTON(ImGuiNavInput_FocusPrev, leftShoulder);
     MAP_BUTTON(ImGuiNavInput_FocusNext, rightShoulder);
-    MAP_BUTTON(ImGuiNavInput_TweakSlow, leftTrigger);
-    MAP_BUTTON(ImGuiNavInput_TweakFast, rightTrigger);
+    MAP_BUTTON(ImGuiNavInput_TweakSlow, leftShoulder);
+    MAP_BUTTON(ImGuiNavInput_TweakFast, rightShoulder);
 #undef MAP_BUTTON
 
     io.NavInputs[ImGuiNavInput_LStickLeft] = gp.leftThumbstick.left.value;
@@ -493,10 +525,11 @@ static void ImGui_ImplOSX_UpdateGamepads()
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 }
 
-static void ImGui_ImplOSX_UpdateKeyModifiers()
+static void ImGui_ImplOSX_UpdateImePosWithView(NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.AddKeyModsEvent(g_KeyModifiers);
+    if (io.WantTextInput)
+        [g_KeyEventResponder updateImePosWithView:view];
 }
 
 void ImGui_ImplOSX_NewFrame(NSView* view)
@@ -520,9 +553,9 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     io.DeltaTime = (float)(current_time - g_Time);
     g_Time = current_time;
 
-    ImGui_ImplOSX_UpdateKeyModifiers();
-    ImGui_ImplOSX_UpdateMouseCursorAndButtons();
+    ImGui_ImplOSX_UpdateMouseCursor();
     ImGui_ImplOSX_UpdateGamepads();
+    ImGui_ImplOSX_UpdateImePosWithView(view);
 }
 
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
@@ -532,16 +565,16 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
         int button = (int)[event buttonNumber];
-        if (button >= 0 && button < IM_ARRAYSIZE(g_MouseDown))
-            g_MouseDown[button] = g_MouseJustPressed[button] = true;
+        if (button >= 0 && button < ImGuiMouseButton_COUNT)
+            io.AddMouseButtonEvent(button, true);
         return io.WantCaptureMouse;
     }
 
     if (event.type == NSEventTypeLeftMouseUp || event.type == NSEventTypeRightMouseUp || event.type == NSEventTypeOtherMouseUp)
     {
         int button = (int)[event buttonNumber];
-        if (button >= 0 && button < IM_ARRAYSIZE(g_MouseDown))
-            g_MouseDown[button] = false;
+        if (button >= 0 && button < ImGuiMouseButton_COUNT)
+            io.AddMouseButtonEvent(button, false);
         return io.WantCaptureMouse;
     }
 
@@ -550,7 +583,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         NSPoint mousePoint = event.locationInWindow;
         mousePoint = [view convertPoint:mousePoint fromView:nil];
         mousePoint = NSMakePoint(mousePoint.x, view.bounds.size.height - mousePoint.y);
-        io.MousePos = ImVec2((float)mousePoint.x, (float)mousePoint.y);
+        io.AddMousePosEvent((float)mousePoint.x, (float)mousePoint.y);
     }
 
     if (event.type == NSEventTypeScrollWheel)
@@ -590,11 +623,9 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             wheel_dx = [event deltaX];
             wheel_dy = [event deltaY];
         }
+        if (wheel_dx != 0.0 || wheel_dx != 0.0)
+            io.AddMouseWheelEvent((float)wheel_dx * 0.1f, (float)wheel_dy * 0.1f);
 
-        if (fabs(wheel_dx) > 0.0)
-            io.MouseWheelH += (float)wheel_dx * 0.1f;
-        if (fabs(wheel_dy) > 0.0)
-            io.MouseWheel += (float)wheel_dy * 0.1f;
         return io.WantCaptureMouse;
     }
 
@@ -603,9 +634,10 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         if ([event isARepeat])
             return io.WantCaptureKeyboard;
 
+        int key_code = (int)[event keyCode];
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         io.AddKeyEvent(key, event.type == NSEventTypeKeyDown);
-        io.SetKeyEventNativeData(key, (int)[event keyCode], -1); // To support legacy indexing (<1.87 user code)
+        io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
 
         return io.WantCaptureKeyboard;
     }
@@ -615,17 +647,16 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         unsigned short key_code = [event keyCode];
         unsigned int flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
 
-        ImGuiKeyModFlags imgui_flags = ImGuiKeyModFlags_None;
+        ImGuiKeyModFlags imgui_key_mods = ImGuiKeyModFlags_None;
         if (flags & NSEventModifierFlagShift)
-            imgui_flags |= ImGuiKeyModFlags_Shift;
+            imgui_key_mods |= ImGuiKeyModFlags_Shift;
         if (flags & NSEventModifierFlagControl)
-            imgui_flags |= ImGuiKeyModFlags_Ctrl;
+            imgui_key_mods |= ImGuiKeyModFlags_Ctrl;
         if (flags & NSEventModifierFlagOption)
-            imgui_flags |= ImGuiKeyModFlags_Alt;
+            imgui_key_mods |= ImGuiKeyModFlags_Alt;
         if (flags & NSEventModifierFlagCommand)
-            imgui_flags |= ImGuiKeyModFlags_Super;
-
-        g_KeyModifiers = imgui_flags;
+            imgui_key_mods |= ImGuiKeyModFlags_Super;
+        io.AddKeyModsEvent(imgui_key_mods);
 
         ImGuiKey key = ImGui_ImplOSX_KeyCodeToImGuiKey(key_code);
         if (key != ImGuiKey_None)
@@ -654,7 +685,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             }
             else if (imgui_mask)
             {
-                io.AddKeyEvent(key, (imgui_flags & imgui_mask) != 0);
+                io.AddKeyEvent(key, (imgui_key_mods & imgui_mask) != 0);
             }
             io.SetKeyEventNativeData(key, key_code, -1); // To support legacy indexing (<1.87 user code)
         }
