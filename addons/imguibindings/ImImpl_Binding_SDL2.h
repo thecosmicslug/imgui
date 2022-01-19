@@ -64,6 +64,119 @@ static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
 */
 
 
+static ImGuiKey ImplSDL2KeycodeToImGuiKey(int keycode) {
+    // Cloned from imgui/backend/imgui_imp_sdl.cpp
+    switch (keycode)    {
+        case SDLK_TAB: return ImGuiKey_Tab;
+        case SDLK_LEFT: return ImGuiKey_LeftArrow;
+        case SDLK_RIGHT: return ImGuiKey_RightArrow;
+        case SDLK_UP: return ImGuiKey_UpArrow;
+        case SDLK_DOWN: return ImGuiKey_DownArrow;
+        case SDLK_PAGEUP: return ImGuiKey_PageUp;
+        case SDLK_PAGEDOWN: return ImGuiKey_PageDown;
+        case SDLK_HOME: return ImGuiKey_Home;
+        case SDLK_END: return ImGuiKey_End;
+        case SDLK_INSERT: return ImGuiKey_Insert;
+        case SDLK_DELETE: return ImGuiKey_Delete;
+        case SDLK_BACKSPACE: return ImGuiKey_Backspace;
+        case SDLK_SPACE: return ImGuiKey_Space;
+        case SDLK_RETURN: return ImGuiKey_Enter;
+        case SDLK_ESCAPE: return ImGuiKey_Escape;
+        case SDLK_QUOTE: return ImGuiKey_Apostrophe;
+        case SDLK_COMMA: return ImGuiKey_Comma;
+        case SDLK_MINUS: return ImGuiKey_Minus;
+        case SDLK_PERIOD: return ImGuiKey_Period;
+        case SDLK_SLASH: return ImGuiKey_Slash;
+        case SDLK_SEMICOLON: return ImGuiKey_Semicolon;
+        case SDLK_EQUALS: return ImGuiKey_Equal;
+        case SDLK_LEFTBRACKET: return ImGuiKey_LeftBracket;
+        case SDLK_BACKSLASH: return ImGuiKey_Backslash;
+        case SDLK_RIGHTBRACKET: return ImGuiKey_RightBracket;
+        case SDLK_BACKQUOTE: return ImGuiKey_GraveAccent;
+        case SDLK_CAPSLOCK: return ImGuiKey_CapsLock;
+        case SDLK_SCROLLLOCK: return ImGuiKey_ScrollLock;
+        case SDLK_NUMLOCKCLEAR: return ImGuiKey_NumLock;
+        case SDLK_PRINTSCREEN: return ImGuiKey_PrintScreen;
+        case SDLK_PAUSE: return ImGuiKey_Pause;
+        case SDLK_KP_0: return ImGuiKey_Keypad0;
+        case SDLK_KP_1: return ImGuiKey_Keypad1;
+        case SDLK_KP_2: return ImGuiKey_Keypad2;
+        case SDLK_KP_3: return ImGuiKey_Keypad3;
+        case SDLK_KP_4: return ImGuiKey_Keypad4;
+        case SDLK_KP_5: return ImGuiKey_Keypad5;
+        case SDLK_KP_6: return ImGuiKey_Keypad6;
+        case SDLK_KP_7: return ImGuiKey_Keypad7;
+        case SDLK_KP_8: return ImGuiKey_Keypad8;
+        case SDLK_KP_9: return ImGuiKey_Keypad9;
+        case SDLK_KP_PERIOD: return ImGuiKey_KeypadDecimal;
+        case SDLK_KP_DIVIDE: return ImGuiKey_KeypadDivide;
+        case SDLK_KP_MULTIPLY: return ImGuiKey_KeypadMultiply;
+        case SDLK_KP_MINUS: return ImGuiKey_KeypadSubtract;
+        case SDLK_KP_PLUS: return ImGuiKey_KeypadAdd;
+        case SDLK_KP_ENTER: return ImGuiKey_KeypadEnter;
+        case SDLK_KP_EQUALS: return ImGuiKey_KeypadEqual;
+        case SDLK_LSHIFT: return ImGuiKey_LeftShift;
+        case SDLK_LCTRL: return ImGuiKey_LeftCtrl;
+        case SDLK_LALT: return ImGuiKey_LeftAlt;
+        case SDLK_LGUI: return ImGuiKey_LeftSuper;
+        case SDLK_RSHIFT: return ImGuiKey_RightShift;
+        case SDLK_RCTRL: return ImGuiKey_RightCtrl;
+        case SDLK_RALT: return ImGuiKey_RightAlt;
+        case SDLK_RGUI: return ImGuiKey_RightSuper;
+        case SDLK_MENU: return ImGuiKey_Menu;
+        case SDLK_0: return ImGuiKey_0;
+        case SDLK_1: return ImGuiKey_1;
+        case SDLK_2: return ImGuiKey_2;
+        case SDLK_3: return ImGuiKey_3;
+        case SDLK_4: return ImGuiKey_4;
+        case SDLK_5: return ImGuiKey_5;
+        case SDLK_6: return ImGuiKey_6;
+        case SDLK_7: return ImGuiKey_7;
+        case SDLK_8: return ImGuiKey_8;
+        case SDLK_9: return ImGuiKey_9;
+        case SDLK_a: return ImGuiKey_A;
+        case SDLK_b: return ImGuiKey_B;
+        case SDLK_c: return ImGuiKey_C;
+        case SDLK_d: return ImGuiKey_D;
+        case SDLK_e: return ImGuiKey_E;
+        case SDLK_f: return ImGuiKey_F;
+        case SDLK_g: return ImGuiKey_G;
+        case SDLK_h: return ImGuiKey_H;
+        case SDLK_i: return ImGuiKey_I;
+        case SDLK_j: return ImGuiKey_J;
+        case SDLK_k: return ImGuiKey_K;
+        case SDLK_l: return ImGuiKey_L;
+        case SDLK_m: return ImGuiKey_M;
+        case SDLK_n: return ImGuiKey_N;
+        case SDLK_o: return ImGuiKey_O;
+        case SDLK_p: return ImGuiKey_P;
+        case SDLK_q: return ImGuiKey_Q;
+        case SDLK_r: return ImGuiKey_R;
+        case SDLK_s: return ImGuiKey_S;
+        case SDLK_t: return ImGuiKey_T;
+        case SDLK_u: return ImGuiKey_U;
+        case SDLK_v: return ImGuiKey_V;
+        case SDLK_w: return ImGuiKey_W;
+        case SDLK_x: return ImGuiKey_X;
+        case SDLK_y: return ImGuiKey_Y;
+        case SDLK_z: return ImGuiKey_Z;
+        case SDLK_F1: return ImGuiKey_F1;
+        case SDLK_F2: return ImGuiKey_F2;
+        case SDLK_F3: return ImGuiKey_F3;
+        case SDLK_F4: return ImGuiKey_F4;
+        case SDLK_F5: return ImGuiKey_F5;
+        case SDLK_F6: return ImGuiKey_F6;
+        case SDLK_F7: return ImGuiKey_F7;
+        case SDLK_F8: return ImGuiKey_F8;
+        case SDLK_F9: return ImGuiKey_F9;
+        case SDLK_F10: return ImGuiKey_F10;
+        case SDLK_F11: return ImGuiKey_F11;
+        case SDLK_F12: return ImGuiKey_F12;
+    }
+    return ImGuiKey_None;
+}
+
+
 static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     //int w, h;
     int fb_w, fb_h;
@@ -80,30 +193,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;   // We can honor GetMouseCursor() values
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;    // We can honor io.WantSetMousePos requests (optional, rarely used)
 
-    io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
-    io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
-    io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
-    io.KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
-    io.KeyMap[ImGuiKey_DownArrow] = SDL_SCANCODE_DOWN;
-    io.KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
-    io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
-    io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
-    io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
-    io.KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
-    io.KeyMap[ImGuiKey_Delete] = SDLK_DELETE;
-    io.KeyMap[ImGuiKey_Backspace] = SDLK_BACKSPACE;
-    io.KeyMap[ImGuiKey_Enter] = SDLK_RETURN;
-    io.KeyMap[ImGuiKey_Escape] = SDLK_ESCAPE;
-    io.KeyMap[ImGuiKey_Space] = SDLK_SPACE;
-#   ifndef __EMSCRIPTEN__  // emscripten doesn't like it (and triggers a 'NewFrameSanityCheck' or something like that [Tested only with SDL2 binding])
-    io.KeyMap[ImGuiKey_KeypadEnter] = SDL_SCANCODE_KP_ENTER;
-#   endif
-    io.KeyMap[ImGuiKey_A] = SDLK_a;
-    io.KeyMap[ImGuiKey_C] = SDLK_c;
-    io.KeyMap[ImGuiKey_V] = SDLK_v;
-    io.KeyMap[ImGuiKey_X] = SDLK_x;
-    io.KeyMap[ImGuiKey_Y] = SDLK_y;
-    io.KeyMap[ImGuiKey_Z] = SDLK_z;
+    io.BackendUsingLegacyKeyArrays = 0; // Not sure if user must set this
 
     //io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
@@ -166,7 +256,7 @@ I think failing in SDL_Init() when a requested subsystem doesn't work properly i
     //SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,);
     //SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE,1);
 
-    window = SDL_CreateWindow((pOptionalInitParams && pOptionalInitParams->gWindowTitle[0]!='\0') ? (const char*) &pOptionalInitParams->gWindowTitle[0] : "ImGui SDL2 OpenGL example",
+    window = SDL_CreateWindow((pOptionalInitParams && pOptionalInitParams->gWindowTitle[0]!='\0') ? (const char*) &pOptionalInitParams->gWindowTitle[0] : "Dear ImGui SDL2 OpenGL example",
                           SDL_WINDOWPOS_CENTERED,
                           SDL_WINDOWPOS_CENTERED,
                           pOptionalInitParams ? pOptionalInitParams->gWindowSize.x : 1270,
@@ -230,13 +320,12 @@ I think failing in SDL_Init() when a requested subsystem doesn't work properly i
 }
 
 
-#   include <SDL2/SDL.h>
 static void ImImplMainLoopFrame(void* pDone)	{
     ImGuiIO& io = ImGui::GetIO();
     int& done = *((int*) pDone);
     static SDL_Event event;
 
-    for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
+    //for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
     if (!gImGuiPaused) {
         static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
         static bool oldMustHideCursor = io.MouseDrawCursor;
@@ -281,33 +370,19 @@ static void ImImplMainLoopFrame(void* pDone)	{
         case SDL_KEYDOWN:
         case SDL_KEYUP:
         {
-            const SDL_Keymod mod = SDL_GetModState();
-            io.KeyCtrl = (mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0;
-            io.KeyShift = (mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0;
-            io.KeyAlt = (mod & (KMOD_LALT|KMOD_RALT)) != 0;
+            ImGuiKeyModFlags mf = 0;
+            SDL_Keymod mod = SDL_GetModState();
+            if ((mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0)   mf|= ImGuiKeyModFlags_Ctrl;
+            if ((mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0) mf|= ImGuiKeyModFlags_Shift;
+            if ((mod & (KMOD_LALT|KMOD_RALT)) != 0)     mf|= ImGuiKeyModFlags_Alt;
+            if ((mod & (KMOD_LGUI|KMOD_RGUI)) != 0)     mf|= ImGuiKeyModFlags_Super;
+            io.AddKeyModsEvent(mf);
 
             const bool down = (event.type == SDL_KEYDOWN);
-            int key = (event.key.keysym.sym);
-            static bool gImGuiCapsLockDown = false;
-            if (key==SDLK_CAPSLOCK) gImGuiCapsLockDown = down;
-            else if (key>=SDLK_a && key<=SDLK_z && ((io.KeyShift && !io.KeyCtrl) || gImGuiCapsLockDown)) key-= ((const int)'a'-(const int)'A');
-            if (key>=SDLK_F1 && key<=SDLK_F12) {
-                const int i = key-SDLK_F1;
-                const bool prevState = gImGuiFunctionKeyDown[i];
-                gImGuiFunctionKeyDown[i] = down;
-                if (down!=prevState)    {
-                    if (down) gImGuiFunctionKeyPressed[i] = true;
-                    else gImGuiFunctionKeyReleased[i] = true;
-                }
-                //fprintf(stderr,"%d) D:%d P:%d R:%d\n",i,(int)gImGuiFunctionKeyDown[i],(int)gImGuiFunctionKeyPressed[i],(int)gImGuiFunctionKeyReleased[i]);
-            }
-            key&=~SDLK_SCANCODE_MASK;
-            // Don't remember what these 3 lines are for... removed because they prevent arrows key to work (TODO: understand what these lines were for).
-            // Found these 3 lines here: https://github.com/ocornut/imgui/issues/729
-            //if (event.key.keysym.sym & (1<<30)) {
-                //fprintf(stderr,"SDL Highbit remask %x -> %x\n", event.key.keysym.sym, key);
-                //key |= 0x100;}
-            if (key>=0 && key<512)  io.KeysDown[key] = down;
+            ImGuiKey key = ImplSDL2KeycodeToImGuiKey(event.key.keysym.sym);
+            io.AddKeyEvent(key, down);
+
+            //io.SetKeyEventNativeData(key, event.key.keysym.sym, event.key.keysym.scancode, event.key.keysym.scancode); // To support legacy indexing (<1.87 user code). Legacy backend uses SDLK_*** as indices to IsKeyXXX() functions.
         }
             break;
             //case SDL_TEXTEDITING:   break;
@@ -318,27 +393,29 @@ static void ImImplMainLoopFrame(void* pDone)	{
             break;
         case SDL_MOUSEBUTTONDOWN:        /**< Mouse button pressed */
         case SDL_MOUSEBUTTONUP: {
+            ImGuiKeyModFlags mf = 0;
             SDL_Keymod mod = SDL_GetModState();
-            io.KeyCtrl = (mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0;
-            io.KeyShift = (mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0;
-            io.KeyAlt = (mod & (KMOD_LALT|KMOD_RALT)) != 0;
+            if ((mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0)   mf|= ImGuiKeyModFlags_Ctrl;
+            if ((mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0) mf|= ImGuiKeyModFlags_Shift;
+            if ((mod & (KMOD_LALT|KMOD_RALT)) != 0)     mf|= ImGuiKeyModFlags_Alt;
+            if ((mod & (KMOD_LGUI|KMOD_RGUI)) != 0)     mf|= ImGuiKeyModFlags_Super;
+            io.AddKeyModsEvent(mf);
             if (event.button.button>0 && event.button.button<6) {
                 static const int evBtnMap[5]={0,2,1,3,4};
-                io.MouseDown[ evBtnMap[event.button.button-1] ] = (event.button.type == SDL_MOUSEBUTTONDOWN);
-                if (event.button.clicks==2 && event.button.type == SDL_MOUSEBUTTONDOWN) gImGuiBindingMouseDblClicked[evBtnMap[event.button.button-1]] = true;
-                //else gImGuiBindingMouseDblClicked[event.button.button-1] = false;
-            }
+                //io.MouseDown[ evBtnMap[event.button.button-1] ] = (event.button.type == SDL_MOUSEBUTTONDOWN);   // Old
+                io.AddMouseButtonEvent(evBtnMap[event.button.button-1],event.button.type==SDL_MOUSEBUTTONDOWN); // New
+                //if (event.button.clicks==2 && event.button.type == SDL_MOUSEBUTTONDOWN) gImGuiBindingMouseDblClicked[evBtnMap[event.button.button-1]] = true;
+           }
             //fprintf(stderr,"mousePressed[%d] = %s\n",event.button.button-1,(event.button.type == SDL_MOUSEBUTTONDOWN)?"true":"false");
         }
             break;
         case SDL_MOUSEWHEEL:
             // positive away from the user and negative toward the user
-            io.MouseWheel = (event.wheel.y != 0) ? event.wheel.y > 0 ? 1 : - 1 : 0;           // Mouse wheel: -1,0,+1
-            io.MouseWheelH= (event.wheel.x != 0) ? event.wheel.x > 0 ? 1 : - 1 : 0;      // Mouse wheel: -1,0,+1
-            //fprintf(stderr,"io.MouseWheel = %d (%d,%d)\n",io.MouseWheel,event.wheel.x,event.wheel.y); // set correctly, but why it does not seem to work ?
+            //fprintf(stderr,"io.MouseWheel = %d (%d,%d)\n",io.MouseWheel,event.wheel.x,event.wheel.y);
+            io.AddMouseWheelEvent(event.wheel.x>0?1.0f:(event.wheel.x<0?-1.0f:0.0f),event.wheel.y>0?1.0f:(event.wheel.y<0?-1.0f:0.0f));
             break;
         case SDL_MOUSEMOTION:
-            io.MousePos = ImVec2((float)event.motion.x * mousePosScale.x, (float)event.motion.y * mousePosScale.y);
+            io.AddMousePosEvent((float)event.motion.x * mousePosScale.x, (float)event.motion.y * mousePosScale.y);
             //fprintf(stderr,"io.MousePos (%1.2f,%1.2f)\n",io.MousePos.x,io.MousePos.y);
             break;
         case SDL_QUIT:
@@ -384,7 +461,7 @@ static void ImImplMainLoopFrame(void* pDone)	{
                 // Get mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
                 double mouse_x, mouse_y;
                 glfwGetCursorPos(window, &mouse_x, &mouse_y);
-                io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
+                io.AddMousePosEvent((float)mouse_x, (float)mouse_y);
             }*/
 
             ImGui::NewFrame();
@@ -393,7 +470,6 @@ static void ImImplMainLoopFrame(void* pDone)	{
             ImImpl_NewFramePaused();    // Enables some ImGui queries regardless ImGui::NewFrame() not being called.
             gImGuiCapturesInput = false;
         }
-        for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
     }
 
     if (gImGuiPreDrawGLCallback) gImGuiPreDrawGLCallback();
@@ -423,9 +499,6 @@ static void ImImplMainLoopFrame(void* pDone)	{
     if (gImGuiPreDrawGLSwapBuffersCallback) gImGuiPreDrawGLSwapBuffersCallback();
     SDL_GL_SwapWindow(window);
     if (gImGuiPostDrawGLSwapBuffersCallback) gImGuiPostDrawGLSwapBuffersCallback();
-
-    // Reset additional special keys composed states (mandatory):
-    for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}
 
     // Handle clamped FPS:
     if (gImGuiAppIsIconified) {WaitFor(500);/*printf("Minimized\n");fflush(stdout);*/}

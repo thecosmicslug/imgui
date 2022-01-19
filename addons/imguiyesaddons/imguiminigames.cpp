@@ -658,7 +658,7 @@ namespace ImGuiMiniGames {
         strcpy(characters[Character_Mine],"M");
         strcpy(characters[Character_Flag],"F");
 
-        keyPause = (int) 'p';
+        keyPause = ImGuiKey_P;
 
     }
     Mine::Style Mine::Style::style;
@@ -1452,7 +1452,7 @@ namespace ImGuiMiniGames {
         const ImVec4 tmp((tmp1.x+tmp2.x)*0.5f,(tmp1.y+tmp2.y)*0.5f,(tmp1.z+tmp2.z)*0.5f,(tmp1.w+tmp2.w)*0.5f);
         colors[Color_HoveredCellBackground] = ImGui::ColorConvertFloat4ToU32(tmp);
 
-        keyPause = (int) 'p';
+        keyPause = ImGuiKey_P;
     }
 #   ifndef NO_IMGUIMINIGAMES_MINE
     void Sudoku::Style::setFromMineGameStyle(const Mine::Style& ms) {
@@ -1878,7 +1878,7 @@ namespace ImGuiMiniGames {
 	colors[Color_Numbers] = IM_COL32_BLACK;
 
 	cellRounding = 8.f;
-    keyPause = (int) 'p';
+    keyPause = ImGuiKey_P;
     }
 #   ifndef NO_IMGUIMINIGAMES_MINE
     void Fifteen::Style::setFromMineGameStyle(const Mine::Style& ms) {

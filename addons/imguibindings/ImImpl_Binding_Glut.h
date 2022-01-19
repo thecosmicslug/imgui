@@ -12,7 +12,7 @@
 */
 
 static ImVec2 mousePosScale(1.0f, 1.0f);
-static const int specialCharMapAddend = 128;    // to prevent some special chars from clashing into ImGui normal chars
+//static const int specialCharMapAddend = 128;    // to prevent some special chars from clashing into ImGui normal chars
 
 // NB: ImGui already provide OS clipboard support for Windows so this isn't needed if you are using Windows only.
 #ifndef _WIN32
@@ -68,7 +68,7 @@ static void GlutEntryFunc(int a)   {
     //fprintf(stderr,"GlutEntryFunc %d\n",a);
     if (a==0){
         ImGuiIO& io = ImGui::GetIO();
-        io.MousePos.x = io.MousePos.y = -FLT_MAX;
+        io.AddMousePosEvent(-FLT_MAX,-FLT_MAX);
     }
 }
 static bool gImGuiAppIconized = false;  // stays always false (I'm not able to detect when the user minimizes a window)
@@ -83,120 +83,279 @@ static void GlutWindowStatusFunc(int a)   {
     fprintf(stderr,"GlutWindowStatusFunc %d\n",a);
     //gImGuiAppIconized = a == GL_TRUE;
 }*/
-static inline void GlutSpecialUpDown(int key,int x,int y,bool down)   {
 
+// Glut helper functions
+static ImGuiKey GlutKeyToImGuiKey(int key)  {
+    // cloned from backends/imgui_impl_glut.cpp
+
+    // Glut has 1 function for characters and one for "special keys". We map the characters in the 0..255 range and the keys above.
+    switch (key)    {
+        case '\t':                      return ImGuiKey_Tab;
+        case 256 + GLUT_KEY_LEFT:       return ImGuiKey_LeftArrow;
+        case 256 + GLUT_KEY_RIGHT:      return ImGuiKey_RightArrow;
+        case 256 + GLUT_KEY_UP:         return ImGuiKey_UpArrow;
+        case 256 + GLUT_KEY_DOWN:       return ImGuiKey_DownArrow;
+        case 256 + GLUT_KEY_PAGE_UP:    return ImGuiKey_PageUp;
+        case 256 + GLUT_KEY_PAGE_DOWN:  return ImGuiKey_PageDown;
+        case 256 + GLUT_KEY_HOME:       return ImGuiKey_Home;
+        case 256 + GLUT_KEY_END:        return ImGuiKey_End;
+        case 256 + GLUT_KEY_INSERT:     return ImGuiKey_Insert;
+        case 127:                       return ImGuiKey_Delete;
+        case 8:                         return ImGuiKey_Backspace;
+        case ' ':                       return ImGuiKey_Space;
+        case 13:                        return ImGuiKey_Enter;
+        case 27:                        return ImGuiKey_Escape;
+        case 39:                        return ImGuiKey_Apostrophe;
+        case 44:                        return ImGuiKey_Comma;
+        case 45:                        return ImGuiKey_Minus;
+        case 46:                        return ImGuiKey_Period;
+        case 47:                        return ImGuiKey_Slash;
+        case 59:                        return ImGuiKey_Semicolon;
+        case 61:                        return ImGuiKey_Equal;
+        case 91:                        return ImGuiKey_LeftBracket;
+        case 92:                        return ImGuiKey_Backslash;
+        case 93:                        return ImGuiKey_RightBracket;
+        case 96:                        return ImGuiKey_GraveAccent;
+        //case 0:                         return ImGuiKey_CapsLock;
+        //case 0:                         return ImGuiKey_ScrollLock;
+        case 256 + 0x006D:              return ImGuiKey_NumLock;
+        //case 0:                         return ImGuiKey_PrintScreen;
+        //case 0:                         return ImGuiKey_Pause;
+        //case '0':                       return ImGuiKey_Keypad0;
+        //case '1':                       return ImGuiKey_Keypad1;
+        //case '2':                       return ImGuiKey_Keypad2;
+        //case '3':                       return ImGuiKey_Keypad3;
+        //case '4':                       return ImGuiKey_Keypad4;
+        //case '5':                       return ImGuiKey_Keypad5;
+        //case '6':                       return ImGuiKey_Keypad6;
+        //case '7':                       return ImGuiKey_Keypad7;
+        //case '8':                       return ImGuiKey_Keypad8;
+        //case '9':                       return ImGuiKey_Keypad9;
+        //case 46:                        return ImGuiKey_KeypadDecimal;
+        //case 47:                        return ImGuiKey_KeypadDivide;
+        case 42:                        return ImGuiKey_KeypadMultiply;
+        //case 45:                        return ImGuiKey_KeypadSubtract;
+        case 43:                        return ImGuiKey_KeypadAdd;
+        //case 13:                        return ImGuiKey_KeypadEnter;
+        //case 0:                         return ImGuiKey_KeypadEqual;
+        case 256 + 0x0070:              return ImGuiKey_LeftShift;
+        case 256 + 0x0072:              return ImGuiKey_LeftCtrl;
+        case 256 + 0x0074:              return ImGuiKey_LeftAlt;
+        //case 0:                         return ImGuiKey_LeftSuper;
+        case 256 + 0x0071:              return ImGuiKey_RightShift;
+        case 256 + 0x0073:              return ImGuiKey_RightCtrl;
+        case 256 + 0x0075:              return ImGuiKey_RightAlt;
+        //case 0:                         return ImGuiKey_RightSuper;
+        //case 0:                         return ImGuiKey_Menu;
+        case '0':                       return ImGuiKey_0;
+        case '1':                       return ImGuiKey_1;
+        case '2':                       return ImGuiKey_2;
+        case '3':                       return ImGuiKey_3;
+        case '4':                       return ImGuiKey_4;
+        case '5':                       return ImGuiKey_5;
+        case '6':                       return ImGuiKey_6;
+        case '7':                       return ImGuiKey_7;
+        case '8':                       return ImGuiKey_8;
+        case '9':                       return ImGuiKey_9;
+        case 'A': case 'a':             return ImGuiKey_A;
+        case 'B': case 'b':             return ImGuiKey_B;
+        case 'C': case 'c':             return ImGuiKey_C;
+        case 'D': case 'd':             return ImGuiKey_D;
+        case 'E': case 'e':             return ImGuiKey_E;
+        case 'F': case 'f':             return ImGuiKey_F;
+        case 'G': case 'g':             return ImGuiKey_G;
+        case 'H': case 'h':             return ImGuiKey_H;
+        case 'I': case 'i':             return ImGuiKey_I;
+        case 'J': case 'j':             return ImGuiKey_J;
+        case 'K': case 'k':             return ImGuiKey_K;
+        case 'L': case 'l':             return ImGuiKey_L;
+        case 'M': case 'm':             return ImGuiKey_M;
+        case 'N': case 'n':             return ImGuiKey_N;
+        case 'O': case 'o':             return ImGuiKey_O;
+        case 'P': case 'p':             return ImGuiKey_P;
+        case 'Q': case 'q':             return ImGuiKey_Q;
+        case 'R': case 'r':             return ImGuiKey_R;
+        case 'S': case 's':             return ImGuiKey_S;
+        case 'T': case 't':             return ImGuiKey_T;
+        case 'U': case 'u':             return ImGuiKey_U;
+        case 'V': case 'v':             return ImGuiKey_V;
+        case 'W': case 'w':             return ImGuiKey_W;
+        case 'X': case 'x':             return ImGuiKey_X;
+        case 'Y': case 'y':             return ImGuiKey_Y;
+        case 'Z': case 'z':             return ImGuiKey_Z;
+        case 256 + GLUT_KEY_F1:         return ImGuiKey_F1;
+        case 256 + GLUT_KEY_F2:         return ImGuiKey_F2;
+        case 256 + GLUT_KEY_F3:         return ImGuiKey_F3;
+        case 256 + GLUT_KEY_F4:         return ImGuiKey_F4;
+        case 256 + GLUT_KEY_F5:         return ImGuiKey_F5;
+        case 256 + GLUT_KEY_F6:         return ImGuiKey_F6;
+        case 256 + GLUT_KEY_F7:         return ImGuiKey_F7;
+        case 256 + GLUT_KEY_F8:         return ImGuiKey_F8;
+        case 256 + GLUT_KEY_F9:         return ImGuiKey_F9;
+        case 256 + GLUT_KEY_F10:        return ImGuiKey_F10;
+        case 256 + GLUT_KEY_F11:        return ImGuiKey_F11;
+        case 256 + GLUT_KEY_F12:        return ImGuiKey_F12;
+        default:                        return ImGuiKey_None;
+    }
+}
+/*static void GlutUpdateKeyModifiers(){
     ImGuiIO& io = ImGui::GetIO();
+    int glut_key_mods = glutGetModifiers();
+    ImGuiKeyModFlags key_mods =
+        ((glut_key_mods & GLUT_ACTIVE_CTRL) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((glut_key_mods & GLUT_ACTIVE_SHIFT) ? ImGuiKeyModFlags_Shift : 0) |
+        ((glut_key_mods & GLUT_ACTIVE_ALT) ? ImGuiKeyModFlags_Alt : 0);
+    io.AddKeyModsEvent(key_mods);
+}*/
+static void GlutAddKeyEvent(ImGuiKey key, bool down, int native_keycode)    {
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddKeyEvent(key, down);
 
-    const int mods = glutGetModifiers();
-    io.KeyCtrl = (mods&GLUT_ACTIVE_CTRL) != 0;
-    io.KeyShift = (mods&GLUT_ACTIVE_SHIFT) != 0;
-    io.KeyAlt = (mods&GLUT_ACTIVE_ALT) != 0;
-    io.MousePos.x = x;io.MousePos.y = y;
+    // Legacy indexing does not work for me (sooner or later I get some assertions)
+    //io.SetKeyEventNativeData(key, native_keycode, -1); // To support legacy indexing (<1.87 user code)
+    (void) native_keycode; // Unused
 
-    if (key>=GLUT_KEY_F1 && key<=GLUT_KEY_F12) {
-        const int i = key-GLUT_KEY_F1;
-        const bool prevState = gImGuiFunctionKeyDown[i];
-        gImGuiFunctionKeyDown[i] = down;
-        if (down!=prevState)    {
-            if (down) gImGuiFunctionKeyPressed[i] = true;
-            else gImGuiFunctionKeyReleased[i] = true;
+    //GlutUpdateKeyModifiers();
+    // This is the code I use to replace GlutUpdateKeyModifiers(). It seems to work better for me.
+    ImGuiKeyModFlags mod = 0;
+    if (key==ImGuiKey_LeftShift || key==ImGuiKey_RightShift)            mod = ImGuiKeyModFlags_Shift;
+    else if (key==ImGuiKey_LeftCtrl || key==ImGuiKey_RightCtrl)         mod = ImGuiKeyModFlags_Ctrl;
+    else if (key==ImGuiKey_LeftAlt || key==ImGuiKey_RightAlt)           mod = ImGuiKeyModFlags_Alt;
+    else if (key==ImGuiKey_LeftSuper || key==ImGuiKey_RightSuper)       mod = ImGuiKeyModFlags_Super;
+    if (mod)    {
+        ImGuiKeyModFlags& keymods = io.KeyModsPrev;
+        if (down) keymods|=mod;
+        else keymods&=~mod;
+        io.AddKeyModsEvent(keymods);    // Add actually just copies 'keyMods' into io.KeyMods AND sets up io.KetCtrl, etc.
+    }
+    //----------------------------------------------------------------------------------------------
+}
+
+// Key callbacks
+static inline void GlutKeyboardUpDown(unsigned int c,int x, int y,bool down)  {
+    // Send character to imgui
+    ImGuiIO& io = ImGui::GetIO();
+    if (c<32 /*&& io.KeyCtrl*/)   {
+        // Theis is some strange input from CTRL+some key.
+        // Tested only on my system (Ubuntu+freeglut: I'm not sure it's portable).
+        // That's why I've not merged this into 'GlutKeyToImGuiKey(...)'.
+        // Note that the CTRL modifier is already handled by 'GlutSpecialUpDown(...)':
+        // what was missing was that the key pressed alongside was 'eaten' (without this workaround).
+        switch (c)  {
+        case  1: {c=(unsigned int)'a';break;}    // CTRL+A
+        case  2: {c=(unsigned int)'b';break;}    // CTRL+B
+        case  3: {c=(unsigned int)'c';break;}    // CTRL+C
+        case  4: {c=(unsigned int)'d';break;}    // CTRL+D
+        case  5: {c=(unsigned int)'e';break;}    // CTRL+E
+        case  6: {c=(unsigned int)'f';break;}    // CTRL+F
+        case  7: {c=(unsigned int)'g';break;}    // CTRL+F
+        case  8: {c=(unsigned int)'h';break;}    // CTRL+H  [WARNING: without 'io.KeyCtrl', 8 is 'backspace'!!!]
+        case  9: {c=(unsigned int)'i';break;}    // CTRL+I  [NOTE: without this line ImGui makes me switch through ImGui::windows with CTRL+I. Was this the expected behavior?]
+        case 10: {c=(unsigned int)'j';break;}    // CTRL+J
+        case 11: {c=(unsigned int)'k';break;}    // CTRL+K
+        case 12: {c=(unsigned int)'l';break;}    // CTRL+L
+        // 13 is ENTER (not eaten when CTRL is down AFAIK)
+        case 14: {c=(unsigned int)'m';break;}    // CTRL+M
+        case 15: {c=(unsigned int)'o';break;}    // CTRL+O
+        case 16: {c=(unsigned int)'p';break;}    // CTRL+P
+        case 17: {c=(unsigned int)'q';break;}    // CTRL+Q
+        case 18: {c=(unsigned int)'r';break;}    // CTRL+R
+        case 19: {c=(unsigned int)'s';break;}    // CTRL+S
+        case 20: {c=(unsigned int)'t';break;}    // CTRL+T
+        case 21: {c=(unsigned int)'u';break;}    // CTRL+U
+        case 22: {c=(unsigned int)'v';break;}    // CTRL+V
+        case 23: {c=(unsigned int)'w';break;}    // CTRL+W
+        case 24: {c=(unsigned int)'x';break;}    // CTRL+X
+        case 25: {c=(unsigned int)'y';break;}    // CTRL+Y
+        case 26: {c=(unsigned int)'z';break;}    // CTRL+Z
+
+        case 28: {c=(unsigned int)'\\';break;}   // CTRL+'\\'  [Not sure it's portable: it's the top-left key on my keyboard (not always a backslash)]
+        //case 28: {c=(unsigned int)'ù';break;}    // CTRL+'ù' (it's the key next to 'enter', in the lower row, on my keyboard)
+        //case 195: {c=(unsigned int)'ò';break;}  // SHIFT+'ò' => 'ç' on my keyboard
+        default: break;
         }
-        //fprintf(stderr,"%d) D:%d P:%d R:%d\n",i,(int)gImGuiFunctionKeyDown[i],(int)gImGuiFunctionKeyPressed[i],(int)gImGuiFunctionKeyReleased[i]);
     }
-    else if (key>=0 && key<512-specialCharMapAddend) io.KeysDown[key+specialCharMapAddend] = down;
-}
-static void GlutSpecial(int key,int x,int y)   {
-    GlutSpecialUpDown(key,x,y,true);
-}
-static void GlutSpecialUp(int key,int x,int y)   {
-    GlutSpecialUpDown(key,x,y,false);
-}
-static inline void GlutKeyboardUpDown(unsigned char key,int x,int y,bool down)   {
-
-    ImGuiIO& io = ImGui::GetIO();
-
-    const int mods = glutGetModifiers();
-    io.KeyCtrl = (mods&GLUT_ACTIVE_CTRL) != 0;
-    io.KeyShift = (mods&GLUT_ACTIVE_SHIFT) != 0;
-    io.KeyAlt = (mods&GLUT_ACTIVE_ALT) != 0;
-    io.MousePos.x = x;io.MousePos.y = y;
-
-    if ((int)key<512-specialCharMapAddend)   {
-        io.KeysDown[key] = down;
-        if (down) io.AddInputCharacter((unsigned int)key);
+    const ImGuiKey key = GlutKeyToImGuiKey(c);
+    //if (down && io.KeyCtrl && c<32) fprintf(stderr,"GlutKeyboardUpDown: '%i' (%s) %s\n",key,ImGui::GetKeyName(key),down?"[down]":"[up]");
+    if (down && c >= 32)    {
+        io.AddInputCharacter((unsigned int)c);
+        //fprintf(stderr,"Added input character: '%c' (%u) %s\n",(char)c,c,ImGui::GetKeyName(key));
     }
+    GlutAddKeyEvent(key, down, c);
+    (void)x; (void)y; // Unused
 }
-static void GlutKeyboard(unsigned char key,int x,int y)   {
-    GlutKeyboardUpDown(key,x,y,true);
+static void GlutKeyboard(unsigned char c,int x,int y)   {GlutKeyboardUpDown(c,x,y,true);}
+static void GlutKeyboardUp(unsigned char c,int x,int y)   {GlutKeyboardUpDown(c,x,y,false);}
+
+// Special key callbacks
+static inline void GlutSpecialUpDown(int key,int x, int y,bool down)  {
+    //printf("GlutSpecialUpDown %d [%s]\n", key, down?"down":"up");
+    const ImGuiKey imgui_key = GlutKeyToImGuiKey(key + 256);
+    //fprintf(stderr,"GlutSpecialUpDown: '%i' (%s) %s\n",imgui_key,ImGui::GetKeyName(imgui_key),down?"[down]":"[up]");
+    GlutAddKeyEvent(imgui_key, down, key + 256);
+    (void)x; (void)y; // Unused
 }
-static void GlutKeyboardUp(unsigned char key,int x,int y)   {
-    GlutKeyboardUpDown(key,x,y,false);
-}
+static void GlutSpecial(int key,int x,int y)   {GlutSpecialUpDown(key,x,y,true);}
+static void GlutSpecialUp(int key,int x,int y)   {GlutSpecialUpDown(key,x,y,false);}
+
+// Mouse callbacks
 static void GlutMouse(int b,int s,int x,int y)  {
     //fprintf(stderr,"GlutMouse(%d,%d,%d,%d);\n",b,s,x,y);
     ImGuiIO& io = ImGui::GetIO();
-    const int mods = glutGetModifiers();
-    io.KeyCtrl = (mods&GLUT_ACTIVE_CTRL) != 0;
-    io.KeyShift = (mods&GLUT_ACTIVE_SHIFT) != 0;
-    io.KeyAlt = (mods&GLUT_ACTIVE_ALT) != 0;
-    io.MousePos.x = x;io.MousePos.y = y;
+    io.AddMousePosEvent((float)x, (float)y);
+    //GlutUpdateKeyboardMods();
     if (b>=0 && b<5)    {
         const int d = (b==1 ? 2 : b==2 ? 1 : b);
-        io.MouseDown[d] = (s==0);
 #       ifndef IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
-        if (s==0)   io.MouseWheel = d==3 ? 1 : d==4 ? -1 : 0;
+        if (s==GLUT_DOWN && d>2)    {
+            //io.MouseWheel = d==3 ? 1 : d==4 ? -1 : 0;   // old
+            io.AddMouseWheelEvent(0.0f, d==3 ? 1.0f : (d==4 ? -1.0f : 0.0f));   // new
+        }
+        else
 #       endif //IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
-        // Manual double click handling:
-        static double dblClickTimes[6]={-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX};  // seconds
-        if (s == 0)   {
-            double time = glutGet(GLUT_ELAPSED_TIME);
-            double& oldTime = dblClickTimes[d];
-            bool& mouseDoubleClicked = gImGuiBindingMouseDblClicked[b];
-            if (time - oldTime < io.MouseDoubleClickTime*1000.f) {
-                mouseDoubleClicked = true;
-                oldTime = -FLT_MAX;
-                //fprintf(stderr,"Double Clicked button %d\n",button);
-            }
-            else {
-                //fprintf(stderr,"Not Double Clicked button %d (%1.4f < %1.4f)\n",button,(float)time-(float)oldTime,io.MouseDoubleClickTime);
-                mouseDoubleClicked = false;
-                oldTime = time;
-            }
+        {
+            io.AddMouseButtonEvent(d,s==GLUT_DOWN); // new
+            // Manual double click handling:
+            /*static double dblClickTimes[6]={-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX,-FLT_MAX};  // seconds
+            if (s == 0)   {
+                double time = glutGet(GLUT_ELAPSED_TIME);
+                double& oldTime = dblClickTimes[d];
+                bool& mouseDoubleClicked = gImGuiBindingMouseDblClicked[b];
+                if (time - oldTime < io.MouseDoubleClickTime*1000.f) {
+                    mouseDoubleClicked = true;
+                    oldTime = -FLT_MAX;
+                    //fprintf(stderr,"Double Clicked button %d\n",button);
+                }
+                else {
+                    //fprintf(stderr,"Not Double Clicked button %d (%1.4f < %1.4f)\n",button,(float)time-(float)oldTime,io.MouseDoubleClickTime);
+                    mouseDoubleClicked = false;
+                    oldTime = time;
+                }
+            }*/
         }
     }
 }
 #ifdef IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
-static void GlutMouseWheel(int b,int s,int x,int y)  {
-    //fprintf(stderr,"GlutMouseWheel(%d,%d,%d,%d);\n",b,s,x,y);
+static void GlutMouseWheel(int button,int dir,int x,int y)  {
+    //fprintf(stderr,"GlutMouseWheel(%d,%d,%d,%d);\n",button,dir,x,y);
     ImGuiIO& io = ImGui::GetIO();
-    const int mods = glutGetModifiers();
-    io.KeyCtrl = (mods&GLUT_ACTIVE_CTRL) != 0;
-    io.KeyShift = (mods&GLUT_ACTIVE_SHIFT) != 0;
-    io.KeyAlt = (mods&GLUT_ACTIVE_ALT) != 0;
-    io.MousePos.x = x;io.MousePos.y = y;
-    // NEVER TESTED !!!!!!!!
-    if (s==0)   io.MouseWheel = b==0 ? 1 : b==1 ? -1 : 0;
+    //GlutUpdateKeyboardMods();
+    io.AddMousePosEvent((float)x, (float)y);
+    if (dir != 0)   io.AddMouseWheelEvent(0.0f, dir > 0 ? 1.0f : -1.0f);
+    (void)button; // Unused
 }
 #endif //IMIMPL_GLUT_HAS_MOUSE_WHEEL_CALLBACK
 
 static void GlutMotion(int x,int y)  {
     ImGuiIO& io = ImGui::GetIO();
-    //const int mods = glutGetModifiers();
-    //io.KeyCtrl = (mods&GLUT_ACTIVE_CTRL) != 0;
-    //io.KeyShift = (mods&GLUT_ACTIVE_SHIFT) != 0;
-    //io.KeyAlt = (mods&GLUT_ACTIVE_ALT) != 0;
-    io.MousePos.x = x;io.MousePos.y = y;
+    io.AddMousePosEvent((float)x,(float)y);
 }
 static void GlutPassiveMotion(int x,int y)  {
     ImGuiIO& io = ImGui::GetIO();
-    //const int mods = glutGetModifiers();
-    //io.KeyCtrl = (mods&GLUT_ACTIVE_CTRL) != 0;
-    //io.KeyShift = (mods&GLUT_ACTIVE_SHIFT) != 0;
-    //io.KeyAlt = (mods&GLUT_ACTIVE_ALT) != 0;
-    io.MousePos.x = x;io.MousePos.y = y;
+    io.AddMousePosEvent((float)x,(float)y);
 }
 static void GlutDrawGL()    {
-    ImGuiIO& io = ImGui::GetIO();    
+    ImGuiIO& io = ImGui::GetIO();
     if (gImGuiAppIconized) WaitFor(1000);
 
     // Setup timestep
@@ -208,7 +367,7 @@ static void GlutDrawGL()    {
     if (deltaTime<=0) deltaTime = (1.0f/60.0f);
 
     // Start the frame
-    io.DeltaTime = deltaTime;    
+    io.DeltaTime = deltaTime;
     if (!gImGuiPaused)	{
         static ImGuiMouseCursor oldCursor = ImGuiMouseCursor_Arrow;
         static bool oldMustHideCursor = io.MouseDrawCursor;
@@ -249,7 +408,7 @@ static void GlutDrawGL()    {
             // Get mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
             double mouse_x, mouse_y;
             glfwGetCursorPos(window, &mouse_x, &mouse_y);
-            io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
+            io.AddMousePosEvent((float)mouse_x, (float)mouse_y));
         }*/
 
         ImGui::NewFrame();
@@ -258,7 +417,7 @@ static void GlutDrawGL()    {
         ImImpl_NewFramePaused();    // Enables some ImGui queries regardless ImGui::NewFrame() not being called.
         gImGuiCapturesInput = false;
     }
-    for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
+    //for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
 
     if (gImGuiPreDrawGLCallback) gImGuiPreDrawGLCallback();
     DrawGL();
@@ -288,10 +447,7 @@ static void GlutDrawGL()    {
     glutSwapBuffers();
     if (gImGuiPostDrawGLSwapBuffersCallback) gImGuiPostDrawGLSwapBuffersCallback();
 
-    if (!gImGuiPaused)	for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
-
-    // Reset additional special keys composed states (mandatory):
-    for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}
+    //if (!gImGuiPaused)	for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
 
     // Handle clamped FPS:
     if (curFramesDelay>=0 && ++curFramesDelay>numFramesDelay) WaitFor(200);     // 200 = 5 FPS - frame rate when ImGui is inactive
@@ -330,36 +486,13 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)    {
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;    // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     // Set up ImGui
-    io.KeyMap[ImGuiKey_Tab] = 9;    // tab (ascii)
 
-    // These are returned from glutSpecial:----
-    io.KeyMap[ImGuiKey_LeftArrow] =     specialCharMapAddend + GLUT_KEY_LEFT;    // Left
-    io.KeyMap[ImGuiKey_RightArrow] =    specialCharMapAddend + GLUT_KEY_RIGHT;   // Right
-    io.KeyMap[ImGuiKey_UpArrow] =       specialCharMapAddend + GLUT_KEY_UP;      // Up
-    io.KeyMap[ImGuiKey_DownArrow] =     specialCharMapAddend + GLUT_KEY_DOWN;    // Down
-    io.KeyMap[ImGuiKey_PageUp] =        specialCharMapAddend + GLUT_KEY_PAGE_UP;    // Prior
-    io.KeyMap[ImGuiKey_PageDown] =      specialCharMapAddend + GLUT_KEY_PAGE_DOWN;  // Next
-    io.KeyMap[ImGuiKey_Home] =          specialCharMapAddend + GLUT_KEY_HOME;    // Home
-    io.KeyMap[ImGuiKey_End] =           specialCharMapAddend + GLUT_KEY_END;     // End
-    io.KeyMap[ImGuiKey_Insert] =        specialCharMapAddend + GLUT_KEY_INSERT;
-    // -----------------------------------------
+    // Transition Guide:
+    // IsKeyPressed(MY_NATIVE_KEY_XXX) -> use IsKeyPressed(ImGuiKey_XXX)
+    // IsKeyPressed(GetKeyIndex(ImGuiKey_XXX)) -> use IsKeyPressed(ImGuiKey_XXX)
+    // Backend writing to io.KeyMap[],KeysDown[] -> backend should call io.AddKeyEvent(), if legacy indexing is desired, call io.SetKeyEventNativeData()
 
-    io.KeyMap[ImGuiKey_Space] =     32;       // Space  (ascii)
-    io.KeyMap[ImGuiKey_Delete] =    127;      // Delete  (ascii) (0x006F)
-    io.KeyMap[ImGuiKey_Backspace] = 8;        // Backspace  (ascii)
-    io.KeyMap[ImGuiKey_Enter] = 13;           // Enter  (ascii)
-    io.KeyMap[ImGuiKey_Escape] = 27;          // Escape  (ascii)    
-#   ifndef __EMSCRIPTEN__  // emscripten doesn't like it (and triggers a 'NewFrameSanityCheck' or something like that [But tested only with SDL2 binding, so it might work])
-    io.KeyMap[ImGuiKey_KeypadEnter] = 13;     // Enter  (ascii)
-#   endif
-
-    io.KeyMap[ImGuiKey_A] = 1;
-    io.KeyMap[ImGuiKey_C] = 3;
-    io.KeyMap[ImGuiKey_V] = 22;
-    io.KeyMap[ImGuiKey_X] = 24;
-    io.KeyMap[ImGuiKey_Y] = 25;
-    io.KeyMap[ImGuiKey_Z] = 26;
-
+    io.BackendUsingLegacyKeyArrays = 0; // Not sure if user must set this...
     //io.RenderDrawListsFn = ImImpl_RenderDrawLists;
 #ifndef _WIN32
     //io.SetClipboardTextFn = ImImpl_SetClipboardTextFn;
@@ -411,7 +544,7 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
     //int screenWidth = glutGet(GLUT_SCREEN_WIDTH);
     //glutInitWindowPosition(5 * screenWidth/ 12, 0);
     glutInit(&argc, argv);
-    if (!glutCreateWindow((pOptionalInitParams && pOptionalInitParams->gWindowTitle[0]!='\0') ? (const char*) &pOptionalInitParams->gWindowTitle[0] : "ImGui Glut OpenGL example"))
+    if (!glutCreateWindow((pOptionalInitParams && pOptionalInitParams->gWindowTitle[0]!='\0') ? (const char*) &pOptionalInitParams->gWindowTitle[0] : "Dear ImGui Glut OpenGL example"))
     {
         fprintf(stderr, "Could not call glutCreateWindow(...) successfully.\n");
         return false;
@@ -487,15 +620,6 @@ static bool InitBinding(const ImImpl_InitParams* pOptionalInitParams=NULL,int ar
 
 	return true;
 }
-
-/*
-#	ifdef __EMSCRIPTEN__
-static void ImImplMainLoopFrame()	{
-    ImGuiIO& io = ImGui::GetIO();
-    // TODO:
-}
-#   endif //__EMSCRIPTEN__
-*/
 
 // Application code
 int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** argv)

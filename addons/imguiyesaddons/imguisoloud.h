@@ -2213,12 +2213,26 @@ public:
     void init(SoLoud::Soloud& gSoloud,const int* pOptional18KeysOverrideFromFDiesisToB=NULL);
     void play();
     void renderGUI();
+    enum KeyboardLayout {
+        KL_QWERTY=0,
+        KL_QWERTZ,
+        KL_AZERTY,
+        KL_COUNT
+    };
+    static const char** GetKeyboardLayoutEnumNames();
+    static void SetKeyboardLayout(KeyboardLayout layout);
+    static KeyboardLayout GetKeyboardLayout();
+    static const char* GetKeyName(int i);  // i in [0,IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS]
 protected:
     SoLoud::Soloud* pSoloud;			// SoLoud engine core
     SoLoud::Bus gBus;
     int bushandle;
-    static int DefaultKeys[18];     // From F# to B [by default, with each char casted to int: "1q2w3er5t6yu8i9o0p"]
-    static bool DefaultKeysDown[18];
+#   define IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS 18     // do not change this please
+    static const char* KeyboardLayoutEntryNames[KL_COUNT];
+    static KeyboardLayout DefaultKeyboardLayout;    // KL_QWERTY
+    static int DefaultKeys[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS];     // From F# to B [by default the keys (for KL_QWERTY) are "1q2w3er5t6yu8i9o0p", but as 'ImGuiKey_', that is: {ImGuiKey_1,ImGuiKey_Q,...}]
+    static bool DefaultKeysDown[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS];
+    static const char* DefaultKeysNames[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS];
 
     SoLoud::Basicwave gWave;		// Simple wave audio source
 

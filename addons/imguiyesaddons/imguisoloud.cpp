@@ -6702,7 +6702,7 @@ namespace SoLoud
             {
                 break;
             }
-            int ch;
+            unsigned int ch;
             for (ch = 0; ch < mChannels; ch++)
                 memcpy(mData + samples + mSampleCount * ch, outputs[ch], sizeof(float) * n);
 
@@ -16877,14 +16877,57 @@ void BasicPiano::init(SoLoud::Soloud &gSoloud, const int *pOptional18KeysOverrid
     }
 }
 
-int BasicPiano::DefaultKeys[18] = {(int)'1',(int)'q',(int)'2',(int)'w',(int)'3',(int)'e',(int)'r',(int)'5',(int)'t',(int)'6',
-                                   (int)'y',(int)'u',(int)'8',(int)'i',(int)'9',(int)'o',(int)'0',(int)'p'};
 
-bool BasicPiano::DefaultKeysDown[18] = {false,false,false,false,false,false,false,false,false,false,
-                                       false,false,false,false,false,false,false,false};
+const char* BasicPiano::KeyboardLayoutEntryNames[KL_COUNT] = {"QWERTY","QWERTZ","AZERTY"};
+const char** BasicPiano::GetKeyboardLayoutEnumNames()    {return &KeyboardLayoutEntryNames[0];}
+
+BasicPiano::KeyboardLayout BasicPiano::DefaultKeyboardLayout = BasicPiano::KL_QWERTY;
+
+int BasicPiano::DefaultKeys[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS] = {};//ImGuiKey_1,ImGuiKey_Q,ImGuiKey_2,ImGuiKey_W,ImGuiKey_3,ImGuiKey_E,ImGuiKey_R,ImGuiKey_5,ImGuiKey_T,ImGuiKey_6,
+                                   //ImGuiKey_Y,ImGuiKey_U,ImGuiKey_8,ImGuiKey_I,ImGuiKey_9,ImGuiKey_O,ImGuiKey_0,ImGuiKey_P};
+
+bool BasicPiano::DefaultKeysDown[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS] = {};
+
+const char* BasicPiano::DefaultKeysNames[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS] = {};
+
+void BasicPiano::SetKeyboardLayout(KeyboardLayout layout)   {
+    if (layout>=KL_COUNT) layout = KL_QWERTY;
+    DefaultKeyboardLayout = layout;
+    switch (layout) {
+    case KL_QWERTY: {
+        const int KeysQWERTY[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS] = {ImGuiKey_1,ImGuiKey_Q,ImGuiKey_2,ImGuiKey_W,ImGuiKey_3,ImGuiKey_E,ImGuiKey_R,ImGuiKey_5,ImGuiKey_T,ImGuiKey_6,
+                                                                   ImGuiKey_Y,ImGuiKey_U,ImGuiKey_8,ImGuiKey_I,ImGuiKey_9,ImGuiKey_O,ImGuiKey_0,ImGuiKey_P};
+        memcpy(BasicPiano::DefaultKeys,KeysQWERTY,IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS*sizeof(int));
+    }
+        break;
+    case KL_QWERTZ: {
+        const int KeysQWERTZ[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS] = {ImGuiKey_1,ImGuiKey_Q,ImGuiKey_2,ImGuiKey_W,ImGuiKey_3,ImGuiKey_E,ImGuiKey_R,ImGuiKey_5,ImGuiKey_T,ImGuiKey_6,
+                                                                   ImGuiKey_Z,ImGuiKey_U,ImGuiKey_8,ImGuiKey_I,ImGuiKey_9,ImGuiKey_O,ImGuiKey_0,ImGuiKey_P};
+        memcpy(BasicPiano::DefaultKeys,KeysQWERTZ,IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS*sizeof(int));
+    }
+        break;
+    case KL_AZERTY: {
+        const int KeysAZERTY[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS] = {ImGuiKey_1,ImGuiKey_A,ImGuiKey_2,ImGuiKey_Z,ImGuiKey_3,ImGuiKey_E,ImGuiKey_R,ImGuiKey_5,ImGuiKey_T,ImGuiKey_6,
+                                                                   ImGuiKey_Y,ImGuiKey_U,ImGuiKey_8,ImGuiKey_I,ImGuiKey_9,ImGuiKey_O,ImGuiKey_0,ImGuiKey_P};
+        memcpy(BasicPiano::DefaultKeys,KeysAZERTY,IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS*sizeof(int));
+    }
+        break;
+    default: IM_ASSERT(1);  // Should never happen
+        break;
+    }
+    for (int i=0;i<IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS;i++)   {
+        DefaultKeysNames[i] = ImGui::GetKeyName(DefaultKeys[i]);
+    }
+}
+BasicPiano::KeyboardLayout BasicPiano::GetKeyboardLayout()  {return DefaultKeyboardLayout;}
+const char* BasicPiano::GetKeyName(int i)    {
+    IM_ASSERT(i>=0 && i<IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS);
+    return DefaultKeysNames[i];
+}
 
 void BasicPiano::play() {
     if (!inited) return;
+    if (DefaultKeyboardLayout>=KL_COUNT || DefaultKeys[0]==0) SetKeyboardLayout(DefaultKeyboardLayout);
 
     pSoloud->setFilterParameter(bushandle, 0, 0, filter_param0[0]);
     pSoloud->setFilterParameter(bushandle, 1, 0, filter_param0[1]);
@@ -16893,37 +16936,37 @@ void BasicPiano::play() {
 
     pSoloud->setFilterParameter(bushandle, 0, 1, filter_param1[0]);
     pSoloud->setFilterParameter(bushandle, 0, 2, filter_param2[0]);
-    ImGuiIO& io = ImGui::GetIO();
+    //ImGuiIO& io = ImGui::GetIO();
 
-    static bool KeysDown[128]={0};
+    static bool KeysDown[IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS]={0};
 
-#   define NOTEKEY(x, p)\
-    if (io.KeysDown[x] && !KeysDown[x]) { plonk((float)pow(0.943875f, p));KeysDown[x]=DefaultKeysDown[18-(p)]=true;} \
-    if (!io.KeysDown[x] && KeysDown[x]) { unplonk((float)pow(0.943875f, p));KeysDown[x]=DefaultKeysDown[18-(p)]=false;}
+#   define NOTEKEY(x, p, i)\
+    if (ImGui::IsKeyDown(x) && !KeysDown[i]) { plonk((float)pow(0.943875f, p));KeysDown[i]=DefaultKeysDown[i]=true;} \
+    if (!ImGui::IsKeyDown(x) && KeysDown[i]) { unplonk((float)pow(0.943875f, p));KeysDown[i]=DefaultKeysDown[i]=false;}
 
-    for (int i=0;i<18;i++) {
-        NOTEKEY(DefaultKeys[i],18-i);
+    for (int i=0;i<IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS;i++) {
+        NOTEKEY(DefaultKeys[i],IMGUI_SOLOUD_BASIC_PIANO_NUM_KEYS-i,i);
     }
 
     /*
-    NOTEKEY((int)'1', 18); // F#
-    NOTEKEY((int)'q', 17); // G
-    NOTEKEY((int)'2', 16); // G#
-    NOTEKEY((int)'w', 15); // A
-    NOTEKEY((int)'3', 14); // A#
-    NOTEKEY((int)'e', 13); // B
-    NOTEKEY((int)'r', 12); // C
-    NOTEKEY((int)'5', 11); // C#
-    NOTEKEY((int)'t', 10); // D
-    NOTEKEY((int)'6', 9); // D#
-    NOTEKEY((int)'y', 8); // E
-    NOTEKEY((int)'u', 7); // F
-    NOTEKEY((int)'8', 6); // F#
-    NOTEKEY((int)'i', 5); // G
-    NOTEKEY((int)'9', 4); // G#
-    NOTEKEY((int)'o', 3); // A
-    NOTEKEY((int)'0', 2); // A#
-    NOTEKEY((int)'p', 1); // B
+    NOTEKEY(ImGui_Key_1 18, 0); // F#
+    NOTEKEY(ImGui_Key_Q 17, 1); // G
+    NOTEKEY(ImGui_Key_2, 16, 2); // G#
+    NOTEKEY(ImGui_Key_W', 15, 3); // A
+    NOTEKEY(ImGui_Key_3', 14, 4); // A#
+    NOTEKEY(ImGui_Key_E', 13, 5); // B
+    NOTEKEY(ImGui_Key_R', 12, 6); // C
+    NOTEKEY(ImGui_Key_5', 11, 7); // C#
+    NOTEKEY(ImGui_Key_T', 10, 8); // D
+    NOTEKEY(ImGui_Key_6', 9, 9); // D#
+    NOTEKEY(ImGui_Key_Y', 8, 10); // E
+    NOTEKEY(ImGui_Key_U', 7, 11); // F
+    NOTEKEY(ImGui_Key_8', 6, 12); // F#
+    NOTEKEY(ImGui_Key_I', 5, 13); // G
+    NOTEKEY(ImGui_Key_9', 4, 14); // G#
+    NOTEKEY(ImGui_Key_O', 3, 15); // A
+    NOTEKEY(ImGui_Key_0', 2, 16); // A#
+    NOTEKEY(ImGui_Key_P', 1, 17); // B
     */
 
 #   undef NOTEKEY

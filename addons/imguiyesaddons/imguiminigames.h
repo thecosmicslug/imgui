@@ -135,7 +135,7 @@ namespace ImGuiMiniGames {
                 Character_Count
             };
             char characters[Character_Count][5];
-            int keyPause;                       // This depends on your key-mapping in ImGui. (default == 'p')
+            int keyPause;                       // This depends on your key-mapping in ImGui. (default == ImGuiKey_P)
             static Style style;
             inline static Style& Get() {return style;}
             IMGUI_API Style();
@@ -188,7 +188,7 @@ namespace ImGuiMiniGames {
                 Color_Count
             };
             ImU32 colors[Color_Count];
-            int keyPause;                       // This depends on your key-mapping in ImGui. (default == 'p')
+            int keyPause;                       // This depends on your key-mapping in ImGui. (default == ImGuiKey_P)
             static Style style;
             inline static Style& Get() {return style;}
             IMGUI_API Style();
@@ -236,7 +236,7 @@ namespace ImGuiMiniGames {
             };
             ImU32 colors[Color_Count];
             float cellRounding;
-            int keyPause;                       // This depends on your key-mapping in ImGui. (default == 'p')
+            int keyPause;                       // This depends on your key-mapping in ImGui. (default == ImGuiKey_P)
             static Style style;
             inline static Style& Get() {return style;}
             IMGUI_API Style();

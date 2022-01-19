@@ -232,8 +232,8 @@ void DrawGL()	// Mandatory
 
     // Pause/Resume ImGui and process input as usual
     if (!ImGui::GetIO().WantCaptureKeyboard)    {
-        if (ImGui::IsKeyPressed('h',false)       // case sensitive
-                || gImGuiFunctionKeyReleased[0])     // 0 = F1, 11 = F12
+        if (ImGui::IsKeyPressed(ImGuiKey_H,false)
+                || ImGui::IsKeyPressed(ImGuiKey_F1,false))
             gImGuiPaused = !gImGuiPaused;       // TODO: fix minor visual bug (if possible) happening at the first "restoring ImGui" frame (comment out the line "if (gImGuiPaused) return;" to see it)
     }
 
@@ -249,15 +249,13 @@ void DrawGL()	// Mandatory
             // (Key and Mouse) Input events fall into two main categories:
             // 1) "stateful" events (= pressed or released events) are easier to process. e.g.:
 
-            if (ImGui::IsKeyPressed('H',false))        // case sensitive
+            if (ImGui::IsKeyPressed(ImGuiKey_H, false))
             {printf("'H' key pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
             // Tips for processing other "stateful" events (e.g. key/mouse pressed/released):
             // a) for ImGui "known special chars", we can use something like:
-            //      if (ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Escape],false))  {...}
+            //      if (ImGui::IsKeyPressed(ImGuiKey_Escape,false))  {...}
             // b) for mouse Pressed/Released events:
-            //      if (io.KeysPressed[...]) {...}
-            // c) for F1-F12 Pressed/Released events use gImGuiFunctionKeyXXX[0-11]:
-            //      if (gImGuiFunctionKeyReleased[0]) {...}
+            //      if (io.MousePressed[...]) {...}
 
             // 2) "immediate" (or "continuous") events (= down events)
             // When taking actions based on continuous events (e.g. "down events"), IMHO it's better to sync
@@ -273,7 +271,7 @@ void DrawGL()	// Mandatory
             else {
                 timer+=delta;
                 //-------------------------------------------------------------------
-                if (io.KeysDown[io.KeyMap[ImGuiKey_RightArrow]]) {printf("Right arrow pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
+                if (ImGui::IsKeyDown(ImGuiKey_RightArrow)) {printf("Right arrow pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
                 //if (io.MouseDown[2]) {printf("Middle Mouse Button pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
                 //-------------------------------------------------------------------
             }
@@ -307,7 +305,7 @@ void DrawGL()	// Mandatory
 
         if (ImGui::TreeNodeEx("Pause/Resume ImGui and process input as usual",collapsingHeaderFlags)) {
         //ImGui::Text("\n");ImGui::Separator();ImGui::Text("Pause/Resume ImGui and process input as usual");ImGui::Separator();
-        ImGui::Text("Press F1 (or lowercase 'h') to turn ImGui on and off.");
+        ImGui::Text("Press F1 (or 'h') to turn ImGui on and off.");
         ImVec4 halfTextColor = ImGui::GetStyle().Colors[ImGuiCol_Text];halfTextColor.w*=0.5f;
         ImGui::TextColored(halfTextColor,"(Please read the code for further tips about input processing).");
         //ImGui::Spacing();
@@ -1872,7 +1870,7 @@ void DrawGL()	// Mandatory
 #           ifdef IMGUISOLOUD_HAS_BASICPIANO    // This is an automatic definition (that depends on other definitions)
             const bool pianoEnabled = ImGui::TreeNode("Play piano using the PC keyboard");
             if (ImGui::IsItemHovered()) {
-                if (pianoEnabled) ImGui::SetTooltip("%s","...listening to PC\nkeys [qwertyuiop]...\nclose this node\nwhen done, please");
+                if (pianoEnabled) ImGui::SetTooltip("%s","...listening to PC\nclose this node\nwhen done, please");
                 else ImGui::SetTooltip("%s","open this node\nand start playing!");
             }
             if (pianoEnabled)      {
@@ -1880,9 +1878,28 @@ void DrawGL()	// Mandatory
                 if (!piano.isInited()) {
                     piano.init(soloud);
                 }
+                //-- Optional Choose Keyboard Layout ---
+                static int keyboardLayout = ImGuiSoloud::BasicPiano::GetKeyboardLayout();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.4f);
+                if (ImGui::Combo("Keyboard Layout##ImGuiSoloud::BasicPiano",&keyboardLayout,ImGuiSoloud::BasicPiano::GetKeyboardLayoutEnumNames(),ImGuiSoloud::BasicPiano::KL_COUNT))   {
+                    IM_ASSERT(keyboardLayout>=0 && keyboardLayout<ImGuiSoloud::BasicPiano::KL_COUNT);
+                    ImGuiSoloud::BasicPiano::SetKeyboardLayout((ImGuiSoloud::BasicPiano::KeyboardLayout) keyboardLayout);
+                }
+                //--------------------------------------
                 piano.play();
                 ImGui::Spacing();
-                ImGui::TextUnformatted("Keys: Q W E R T Y U I O P");
+                ImGui::Text("Keys: %s %s %s %s %s %s %s %s %s %s",  // We don't display keys for piano black keys
+                            ImGuiSoloud::BasicPiano::GetKeyName(1), // 0 -> F#, 1 -> G and so on...
+                            ImGuiSoloud::BasicPiano::GetKeyName(3),
+                            ImGuiSoloud::BasicPiano::GetKeyName(5),
+                            ImGuiSoloud::BasicPiano::GetKeyName(6),
+                            ImGuiSoloud::BasicPiano::GetKeyName(8),
+                            ImGuiSoloud::BasicPiano::GetKeyName(10),
+                            ImGuiSoloud::BasicPiano::GetKeyName(11),
+                            ImGuiSoloud::BasicPiano::GetKeyName(13),
+                            ImGuiSoloud::BasicPiano::GetKeyName(15),
+                            ImGuiSoloud::BasicPiano::GetKeyName(17)
+                            );
                 piano.renderGUI();
 
                 ImGui::TreePop();

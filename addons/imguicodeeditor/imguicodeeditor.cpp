@@ -3986,10 +3986,14 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         if (flags & ImGuiInputTextFlags_CallbackHistory)
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         g.ActiveIdUsingNavInputMask |= (1 << ImGuiNavInput_Cancel);
-        g.ActiveIdUsingKeyInputMask |= ((ImU64)1 << ImGuiKey_Home) | ((ImU64)1 << ImGuiKey_End);
-        g.ActiveIdUsingKeyInputMask |= ((ImU64)1 << ImGuiKey_PageUp) | ((ImU64)1 << ImGuiKey_PageDown);
-        if (flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_AllowTabInput))  // Disable keyboard tabbing out as we will use the \t character.
-            g.ActiveIdUsingKeyInputMask |= ((ImU64)1 << ImGuiKey_Tab);
+        SetActiveIdUsingKey(ImGuiKey_Home);
+        SetActiveIdUsingKey(ImGuiKey_End);
+        SetActiveIdUsingKey(ImGuiKey_PageUp);
+        SetActiveIdUsingKey(ImGuiKey_PageDown);
+        if (flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_AllowTabInput)) // Disable keyboard tabbing out as we will use the \t character.
+        {
+            SetActiveIdUsingKey(ImGuiKey_Tab);
+        }
     }
 
     // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped), clear id immediately (don't wait until the end of the function)
@@ -4100,6 +4104,19 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
 
         const bool ignore_char_inputs = (io.KeyCtrl && !io.KeyAlt) || (is_osx && io.KeySuper);
 
+
+#       ifndef _WIN32   // Not sure if this is correct (without it, I see in mingw compilations that two tabs are written, instead of just one)
+        // It is ill-defined whether the backend needs to send a \t character when pressing the TAB keys.
+        // Win32 and GLFW naturally do it but not SDL.
+        if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressed(ImGuiKey_Tab) && !ignore_char_inputs && !io.KeyShift && !is_readonly)   {
+            if (!io.InputQueueCharacters.contains('\t'))    {
+                unsigned int c = '\t'; // Insert TAB
+                if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
+                    state->OnKeyPressed((int)c);
+            }
+        }
+#       endif
+
         // Process regular text input (before we check for Return because using some IME will effectively send a Return?)
         // We ignore CTRL inputs, but need to allow ALT+CTRL as some keyboards (e.g. German) use AltGR (which _is_ Alt+Ctrl) to input certain characters.
         if (io.InputQueueCharacters.Size > 0)
@@ -4131,20 +4148,20 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
         const bool is_ctrl_key_only = io.KeyCtrl && !io.KeyShift && !io.KeyAlt && !io.KeySuper;
         const bool is_shift_key_only = io.KeyShift && !io.KeyCtrl && !io.KeyAlt && !io.KeySuper;
 
-        const bool is_cut   = ((is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_X)) || (is_shift_key_only && IsKeyPressedMap(ImGuiKey_Delete))) && !is_readonly && state->HasSelection();
-        const bool is_copy  = ((is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_C)) || (is_ctrl_key_only  && IsKeyPressedMap(ImGuiKey_Insert))) && state->HasSelection();
-        const bool is_paste = ((is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_V)) || (is_shift_key_only && IsKeyPressedMap(ImGuiKey_Insert))) && !is_readonly;
+        const bool is_cut   = ((is_shortcut_key_only && IsKeyPressed(ImGuiKey_X)) || (is_shift_key_only && IsKeyPressed(ImGuiKey_Delete))) && !is_readonly && state->HasSelection();
+        const bool is_copy  = ((is_shortcut_key_only && IsKeyPressed(ImGuiKey_C)) || (is_ctrl_key_only  && IsKeyPressed(ImGuiKey_Insert))) && state->HasSelection();
+        const bool is_paste = ((is_shortcut_key_only && IsKeyPressed(ImGuiKey_V)) || (is_shift_key_only && IsKeyPressed(ImGuiKey_Insert))) && !is_readonly;
 
         // We allow validate/cancel with Nav source (gamepad) to makes it easier to undo an accidental NavInput press with no keyboard wired, but otherwise it isn't very useful.
-        const bool is_validate_enter = IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_KeypadEnter);
-        const bool is_validate_nav = (IsNavInputTest(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed) && !IsKeyPressedMap(ImGuiKey_Space)) || IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed);
-        const bool is_cancel   = IsKeyPressedMap(ImGuiKey_Escape) || IsNavInputTest(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed);
+        const bool is_validate_enter = IsKeyPressed(ImGuiKey_Enter) || IsKeyPressed(ImGuiKey_KeypadEnter);
+        const bool is_validate_nav = (IsNavInputTest(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed) && !IsKeyPressed(ImGuiKey_Space)) || IsNavInputTest(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed);
+        const bool is_cancel   = IsKeyPressed(ImGuiKey_Escape) || IsNavInputTest(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed);
 
-        if (IsKeyPressedMap(ImGuiKey_LeftArrow))                        { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_RightArrow))                  { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINEEND : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT : STB_TEXTEDIT_K_RIGHT) | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_UpArrow))                     { if (io.KeyCtrl) SetScrollY(draw_window, ImMax(draw_window->Scroll.y - g.FontSize, 0.0f)); else state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTSTART : STB_TEXTEDIT_K_UP) | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_DownArrow))                   { if (io.KeyCtrl) SetScrollY(draw_window, ImMin(draw_window->Scroll.y + g.FontSize, GetScrollMaxY())); else state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTEND : STB_TEXTEDIT_K_DOWN) | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Home))                        {
+        if (IsKeyPressed(ImGuiKey_LeftArrow))                        { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINESTART : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDLEFT : STB_TEXTEDIT_K_LEFT) | k_mask); }
+        else if (IsKeyPressed(ImGuiKey_RightArrow))                  { state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_LINEEND : is_wordmove_key_down ? STB_TEXTEDIT_K_WORDRIGHT : STB_TEXTEDIT_K_RIGHT) | k_mask); }
+        else if (IsKeyPressed(ImGuiKey_UpArrow))                     { if (io.KeyCtrl) SetScrollY(draw_window, ImMax(draw_window->Scroll.y - g.FontSize, 0.0f)); else state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTSTART : STB_TEXTEDIT_K_UP) | k_mask); }
+        else if (IsKeyPressed(ImGuiKey_DownArrow))                   { if (io.KeyCtrl) SetScrollY(draw_window, ImMin(draw_window->Scroll.y + g.FontSize, GetScrollMaxY())); else state->OnKeyPressed((is_startend_key_down ? STB_TEXTEDIT_K_TEXTEND : STB_TEXTEDIT_K_DOWN) | k_mask); }
+        else if (IsKeyPressed(ImGuiKey_Home))                        {
             const int cursorStart = state->Stb.cursor;
             state->OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTSTART | k_mask : STB_TEXTEDIT_K_LINESTART | k_mask);
             const bool skipInitialTabs = true;  // if we want to place the cursor past the initial tabs in this line
@@ -4161,9 +4178,9 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 for (int i=0;i<numTabs;i++) state->OnKeyPressed(STB_TEXTEDIT_K_RIGHT);
             }
         }
-        else if (IsKeyPressedMap(ImGuiKey_End))                         { state->OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Delete) && !is_readonly && !is_cut)       { state->OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
-        else if (IsKeyPressedMap(ImGuiKey_Backspace) && !is_readonly)    {
+        else if (IsKeyPressed(ImGuiKey_End))                         { state->OnKeyPressed(is_ctrl_down ? STB_TEXTEDIT_K_TEXTEND | k_mask : STB_TEXTEDIT_K_LINEEND | k_mask); }
+        else if (IsKeyPressed(ImGuiKey_Delete) && !is_readonly && !is_cut)       { state->OnKeyPressed(STB_TEXTEDIT_K_DELETE | k_mask); }
+        else if (IsKeyPressed(ImGuiKey_Backspace) && !is_readonly)    {
             if (!state->HasSelection())
             {
                 if (is_wordmove_key_down) state->OnKeyPressed(STB_TEXTEDIT_K_WORDLEFT|STB_TEXTEDIT_K_SHIFT);
@@ -4213,21 +4230,21 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 }
             }
         }
-        else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressedMap(ImGuiKey_Tab) && !is_ctrl_down && !is_shift_down && !is_alt_down && !is_readonly)
+        /*else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressed(ImGuiKey_Tab) && !is_ctrl_down && !is_shift_down && !is_alt_down && !is_readonly)
         {
             unsigned int c = '\t'; // Insert TAB
             if (InputTextFilterCharacter(&c, flags, callback, callback_user_data, ImGuiInputSource_Keyboard))
                 state->OnKeyPressed((int)c);
-        }
+        }*/
         else if (is_validate_nav)
         {
             IM_ASSERT(!is_validate_enter);
             enter_pressed = clear_active_id = true;
         }
         else if (is_cancel)                              { clear_active_id = cancel_edit = true; }
-        else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_Z) && !is_readonly && is_undoable)    { state->OnKeyPressed(STB_TEXTEDIT_K_UNDO); state->ClearSelection(); }
-        else if (((is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_Y)) || (is_shortcut_key_with_shift && IsKeyPressedMap(ImGuiKey_Z))) && !is_readonly && is_undoable)    { state->OnKeyPressed(STB_TEXTEDIT_K_REDO); state->ClearSelection(); }
-        else if (is_shortcut_key_only && IsKeyPressedMap(ImGuiKey_A))                   { state->SelectAll(); state->CursorFollow = true; }
+        else if (is_shortcut_key_only && IsKeyPressed(ImGuiKey_Z) && !is_readonly && is_undoable)    { state->OnKeyPressed(STB_TEXTEDIT_K_UNDO); state->ClearSelection(); }
+        else if (((is_shortcut_key_only && IsKeyPressed(ImGuiKey_Y)) || (is_shortcut_key_with_shift && IsKeyPressed(ImGuiKey_Z))) && !is_readonly && is_undoable)    { state->OnKeyPressed(STB_TEXTEDIT_K_REDO); state->ClearSelection(); }
+        else if (is_shortcut_key_only && IsKeyPressed(ImGuiKey_A))                   { state->SelectAll(); state->CursorFollow = true; }
         else if (is_cut || is_copy) {
             // Cut, Copy
             if (io.SetClipboardTextFn)
@@ -4318,17 +4335,17 @@ bool BadCodeEditor(const char* label, char* buf, size_t buf_size,ImGuiCe::Langua
                 // The reason we specify the usage semantic (Completion/History) is that Completion needs to disable keyboard TABBING at the moment.
                 ImGuiInputTextFlags event_flag = 0;
                 ImGuiKey event_key = ImGuiKey_COUNT;
-                if ((flags & ImGuiInputTextFlags_CallbackCompletion) != 0 && IsKeyPressedMap(ImGuiKey_Tab))
+                if ((flags & ImGuiInputTextFlags_CallbackCompletion) != 0 && IsKeyPressed(ImGuiKey_Tab))
                 {
                     event_flag = ImGuiInputTextFlags_CallbackCompletion;
                     event_key = ImGuiKey_Tab;
                 }
-                else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressedMap(ImGuiKey_UpArrow))
+                else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressed(ImGuiKey_UpArrow))
                 {
                     event_flag = ImGuiInputTextFlags_CallbackHistory;
                     event_key = ImGuiKey_UpArrow;
                 }
-                else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressedMap(ImGuiKey_DownArrow))
+                else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressed(ImGuiKey_DownArrow))
                 {
                     event_flag = ImGuiInputTextFlags_CallbackHistory;
                     event_key = ImGuiKey_DownArrow;

@@ -8,10 +8,7 @@ float gImGuiInverseFPSClampInsideImGui = -1.0f;    // CAN'T BE 0. < 0 = No clamp
 float gImGuiInverseFPSClampOutsideImGui = -1.0f;   // CAN'T BE 0. < 0 = No clamping.
 bool gImGuiCapturesInput = false;
 bool gImGuiWereOutsideImGui = true;
-bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
-bool gImGuiFunctionKeyDown[12]={false,false,false,false,false,false,false,false,false,false,false,false};
-bool gImGuiFunctionKeyPressed[12]={false,false,false,false,false,false,false,false,false,false,false,false};
-bool gImGuiFunctionKeyReleased[12]={false,false,false,false,false,false,false,false,false,false,false,false};
+//bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};
 int gImGuiNumTextureBindingsPerFrame;    // read-only
 unsigned int gImGuiDefaultFontBuilderFlags = 0;
 ImImplVoidDelegate gImGuiPostInitGLCallback   = NULL;
@@ -1958,12 +1955,58 @@ void ImImpl_NewFramePaused()    {
     g.WindowsActiveCount = 0;
 
     // Update keyboard input state
-    memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
-    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
-        g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+    // cloned from  imgui.cpp: static void ImGui::UpdateKeyboardInputs()
+    {
+        ImGuiContext& g = *GImGui;
+        ImGuiIO& io = g.IO;
+
+        // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
+        io.KeyMods = ImGui::GetMergedKeyModFlags();
+
+        // Import legacy keys or verify they are not used
+    #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
+        if (io.BackendUsingLegacyKeyArrays == 0)
+        {
+            // Backend used new io.AddKeyEvent() API: Good! Verify that old arrays are never written too.
+            for (int n = 0; n < IM_ARRAYSIZE(io.KeysDown); n++)
+                IM_ASSERT(io.KeysDown[n] == false && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
+        }
+        else
+        {
+            if (g.FrameCount == 0)
+                for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
+                    IM_ASSERT(g.IO.KeyMap[n] == -1 && "Backend is not allowed to write to io.KeyMap[0..511]!");
+
+            // Build reverse KeyMap (Named -> Legacy)
+            for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_NamedKey_END; n++)
+                if (io.KeyMap[n] != -1)
+                {
+                    IM_ASSERT(ImGui::IsLegacyKey((ImGuiKey)io.KeyMap[n]));
+                    io.KeyMap[io.KeyMap[n]] = n;
+                }
+
+            // Import legacy keys into new ones
+            for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
+                if (io.KeysDown[n] || io.BackendUsingLegacyKeyArrays == 1)
+                {
+                    const ImGuiKey key = (ImGuiKey)(io.KeyMap[n] != -1 ? io.KeyMap[n] : n);
+                    IM_ASSERT(io.KeyMap[n] == -1 || ImGui::IsNamedKey(key));
+                    io.KeysData[key].Down = io.KeysDown[n];
+                    io.BackendUsingLegacyKeyArrays = 1;
+                }
+        }
+    #endif
+
+        // Update keys
+        for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++)
+        {
+            ImGuiKeyData& key_data = io.KeysData[i];
+            key_data.DownDurationPrev = key_data.DownDuration;
+            key_data.DownDuration = key_data.Down ? (key_data.DownDuration < 0.0f ? 0.0f : key_data.DownDuration + io.DeltaTime) : -1.0f;
+        }
+    }
 
     // Update mouse inputs state
-#if 1
     // cloned from imgui.cpp: static void ImGui::UpdateMouseInputs()
     {
         ImGuiContext& g = *GImGui;
@@ -2024,48 +2067,6 @@ void ImImpl_NewFramePaused()    {
                 g.NavDisableMouseHover = false;
         }
     }
-#else
-    // If mouse just appeared or disappeared (usually denoted by -FLT_MAX component, but in reality we test for -256000.0f) we cancel out movement in MouseDelta
-    if (ImGui::IsMousePosValid(&g.IO.MousePos) && ImGui::IsMousePosValid(&g.IO.MousePosPrev)) g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
-    else g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
-    /* Old code:
-    if (g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0) g.IO.MousePos = ImVec2(-9999.0f, -9999.0f);
-    if ((g.IO.MousePos.x < 0 && g.IO.MousePos.y < 0) || (g.IO.MousePosPrev.x < 0 && g.IO.MousePosPrev.y < 0))   // if mouse just appeared or disappeared (negative coordinate) we cancel out movement in MouseDelta
-        g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
-    else g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;*/
-    g.IO.MousePosPrev = g.IO.MousePos;
-    for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
-    {
-        g.IO.MouseClicked[i] = g.IO.MouseDown[i] && g.IO.MouseDownDuration[i] < 0.0f;
-        g.IO.MouseReleased[i] = !g.IO.MouseDown[i] && g.IO.MouseDownDuration[i] >= 0.0f;
-        g.IO.MouseDownDurationPrev[i] = g.IO.MouseDownDuration[i];
-        g.IO.MouseDownDuration[i] = g.IO.MouseDown[i] ? (g.IO.MouseDownDuration[i] < 0.0f ? 0.0f : g.IO.MouseDownDuration[i] + g.IO.DeltaTime) : -1.0f;
-        g.IO.MouseDoubleClicked[i] = false;
-        if (g.IO.MouseClicked[i])
-        {
-            if (g.Time - g.IO.MouseClickedTime[i] < g.IO.MouseDoubleClickTime)
-            {
-                if (ImLengthSqr(g.IO.MousePos - g.IO.MouseClickedPos[i]) < g.IO.MouseDoubleClickMaxDist * g.IO.MouseDoubleClickMaxDist)
-                    g.IO.MouseDoubleClicked[i] = true;
-                g.IO.MouseClickedTime[i] = -FLT_MAX;    // so the third click isn't turned into a double-click
-            }
-            else
-            {
-                g.IO.MouseClickedTime[i] = g.Time;
-            }
-            g.IO.MouseClickedPos[i] = g.IO.MousePos;
-            g.IO.MouseDragMaxDistanceAbs[i] = ImVec2(0.0f, 0.0f);
-            g.IO.MouseDragMaxDistanceSqr[i] = 0.0f;
-        }
-        else if (g.IO.MouseDown[i])
-        {
-            ImVec2 mouse_delta = g.IO.MousePos - g.IO.MouseClickedPos[i];
-            g.IO.MouseDragMaxDistanceAbs[i].x = ImMax(g.IO.MouseDragMaxDistanceAbs[i].x, mouse_delta.x < 0.0f ? -mouse_delta.x : mouse_delta.x);
-            g.IO.MouseDragMaxDistanceAbs[i].y = ImMax(g.IO.MouseDragMaxDistanceAbs[i].y, mouse_delta.y < 0.0f ? -mouse_delta.y : mouse_delta.y);
-            g.IO.MouseDragMaxDistanceSqr[i] = ImMax(g.IO.MouseDragMaxDistanceSqr[i], ImLengthSqr(mouse_delta));
-        }
-    }
-#endif
 
     // Calculate frame-rate for the user, as a purely luxurious feature
     g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];

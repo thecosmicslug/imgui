@@ -50,7 +50,6 @@ static void ImImpl_ImeSetInputScreenPosFn(int x, int y)
 }
 
 
-
 inline static void ImImpl_InvalidateDeviceObjects()
 {
     if (!g_pd3dDevice)  return;
@@ -59,7 +58,158 @@ inline static void ImImpl_InvalidateDeviceObjects()
     // Please note that we create all textures with D3DPOOL_MANAGED
 }
 
-//static bool gImGuiBindingMouseDblClicked[5]={false,false,false,false,false};  // moved
+
+// --Helper functions cloned by imgui/backend/imgui_impl_win32.cpp----------------
+#define IS_VK_DOWN(VK)  ((::GetKeyState(VK) & 0x8000) != 0)
+static void ImplWin32AddKeyEvent(ImGuiKey key, bool down, int native_keycode, int native_scancode = -1)  {
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddKeyEvent(key, down);
+    //io.SetKeyEventNativeData(key, native_keycode, native_scancode); // To support legacy indexing (<1.87 user code)
+    IM_UNUSED(native_scancode);
+}
+static void ImplWin32ProcessKeyEventsWorkarounds()   {
+    // Left & right Shift keys: when both are pressed together, Windows tend to not generate the WM_KEYUP event for the first released one.
+    if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && !IS_VK_DOWN(VK_LSHIFT))
+        ImplWin32AddKeyEvent(ImGuiKey_LeftShift, false, VK_LSHIFT);
+    if (ImGui::IsKeyDown(ImGuiKey_RightShift) && !IS_VK_DOWN(VK_RSHIFT))
+        ImplWin32AddKeyEvent(ImGuiKey_RightShift, false, VK_RSHIFT);
+
+    // Sometimes WM_KEYUP for Win key is not passed down to the app (e.g. for Win+V on some setups, according to GLFW).
+    if (ImGui::IsKeyDown(ImGuiKey_LeftSuper) && !IS_VK_DOWN(VK_LWIN))
+        ImplWin32AddKeyEvent(ImGuiKey_LeftSuper, false, VK_LWIN);
+    if (ImGui::IsKeyDown(ImGuiKey_RightSuper) && !IS_VK_DOWN(VK_RWIN))
+        ImplWin32AddKeyEvent(ImGuiKey_RightSuper, false, VK_RWIN);
+}
+static void ImplWin32UpdateKeyModifiers()   {
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiKeyModFlags key_mods =
+        ((IS_VK_DOWN(VK_LCONTROL) || IS_VK_DOWN(VK_RCONTROL)) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((IS_VK_DOWN(VK_LSHIFT) || IS_VK_DOWN(VK_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
+        ((IS_VK_DOWN(VK_LMENU) || IS_VK_DOWN(VK_RMENU)) ? ImGuiKeyModFlags_Alt : 0) |
+        ((IS_VK_DOWN(VK_LWIN) || IS_VK_DOWN(VK_RWIN)) ? ImGuiKeyModFlags_Super : 0);
+    io.AddKeyModsEvent(key_mods);
+}
+#define IM_VK_KEYPAD_ENTER      (VK_RETURN + 256)   // There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
+static ImGuiKey ImplWin32VirtualKeyToImGuiKey(WPARAM wParam)    {
+    // Map VK_xxx to ImGuiKey_xxx.
+    switch (wParam) {
+        case VK_TAB: return ImGuiKey_Tab;
+        case VK_LEFT: return ImGuiKey_LeftArrow;
+        case VK_RIGHT: return ImGuiKey_RightArrow;
+        case VK_UP: return ImGuiKey_UpArrow;
+        case VK_DOWN: return ImGuiKey_DownArrow;
+        case VK_PRIOR: return ImGuiKey_PageUp;
+        case VK_NEXT: return ImGuiKey_PageDown;
+        case VK_HOME: return ImGuiKey_Home;
+        case VK_END: return ImGuiKey_End;
+        case VK_INSERT: return ImGuiKey_Insert;
+        case VK_DELETE: return ImGuiKey_Delete;
+        case VK_BACK: return ImGuiKey_Backspace;
+        case VK_SPACE: return ImGuiKey_Space;
+        case VK_RETURN: return ImGuiKey_Enter;
+        case VK_ESCAPE: return ImGuiKey_Escape;
+        case VK_OEM_7: return ImGuiKey_Apostrophe;
+        case VK_OEM_COMMA: return ImGuiKey_Comma;
+        case VK_OEM_MINUS: return ImGuiKey_Minus;
+        case VK_OEM_PERIOD: return ImGuiKey_Period;
+        case VK_OEM_2: return ImGuiKey_Slash;
+        case VK_OEM_1: return ImGuiKey_Semicolon;
+        case VK_OEM_PLUS: return ImGuiKey_Equal;
+        case VK_OEM_4: return ImGuiKey_LeftBracket;
+        case VK_OEM_5: return ImGuiKey_Backslash;
+        case VK_OEM_6: return ImGuiKey_RightBracket;
+        case VK_OEM_3: return ImGuiKey_GraveAccent;
+        case VK_CAPITAL: return ImGuiKey_CapsLock;
+        case VK_SCROLL: return ImGuiKey_ScrollLock;
+        case VK_NUMLOCK: return ImGuiKey_NumLock;
+        case VK_SNAPSHOT: return ImGuiKey_PrintScreen;
+        case VK_PAUSE: return ImGuiKey_Pause;
+        case VK_NUMPAD0: return ImGuiKey_Keypad0;
+        case VK_NUMPAD1: return ImGuiKey_Keypad1;
+        case VK_NUMPAD2: return ImGuiKey_Keypad2;
+        case VK_NUMPAD3: return ImGuiKey_Keypad3;
+        case VK_NUMPAD4: return ImGuiKey_Keypad4;
+        case VK_NUMPAD5: return ImGuiKey_Keypad5;
+        case VK_NUMPAD6: return ImGuiKey_Keypad6;
+        case VK_NUMPAD7: return ImGuiKey_Keypad7;
+        case VK_NUMPAD8: return ImGuiKey_Keypad8;
+        case VK_NUMPAD9: return ImGuiKey_Keypad9;
+        case VK_DECIMAL: return ImGuiKey_KeypadDecimal;
+        case VK_DIVIDE: return ImGuiKey_KeypadDivide;
+        case VK_MULTIPLY: return ImGuiKey_KeypadMultiply;
+        case VK_SUBTRACT: return ImGuiKey_KeypadSubtract;
+        case VK_ADD: return ImGuiKey_KeypadAdd;
+        case IM_VK_KEYPAD_ENTER: return ImGuiKey_KeypadEnter;
+        case VK_LSHIFT: return ImGuiKey_LeftShift;
+        case VK_LCONTROL: return ImGuiKey_LeftCtrl;
+        case VK_LMENU: return ImGuiKey_LeftAlt;
+        case VK_LWIN: return ImGuiKey_LeftSuper;
+        case VK_RSHIFT: return ImGuiKey_RightShift;
+        case VK_RCONTROL: return ImGuiKey_RightCtrl;
+        case VK_RMENU: return ImGuiKey_RightAlt;
+        case VK_RWIN: return ImGuiKey_RightSuper;
+        case VK_APPS: return ImGuiKey_Menu;
+        case '0': return ImGuiKey_0;
+        case '1': return ImGuiKey_1;
+        case '2': return ImGuiKey_2;
+        case '3': return ImGuiKey_3;
+        case '4': return ImGuiKey_4;
+        case '5': return ImGuiKey_5;
+        case '6': return ImGuiKey_6;
+        case '7': return ImGuiKey_7;
+        case '8': return ImGuiKey_8;
+        case '9': return ImGuiKey_9;
+        case 'A': return ImGuiKey_A;
+        case 'B': return ImGuiKey_B;
+        case 'C': return ImGuiKey_C;
+        case 'D': return ImGuiKey_D;
+        case 'E': return ImGuiKey_E;
+        case 'F': return ImGuiKey_F;
+        case 'G': return ImGuiKey_G;
+        case 'H': return ImGuiKey_H;
+        case 'I': return ImGuiKey_I;
+        case 'J': return ImGuiKey_J;
+        case 'K': return ImGuiKey_K;
+        case 'L': return ImGuiKey_L;
+        case 'M': return ImGuiKey_M;
+        case 'N': return ImGuiKey_N;
+        case 'O': return ImGuiKey_O;
+        case 'P': return ImGuiKey_P;
+        case 'Q': return ImGuiKey_Q;
+        case 'R': return ImGuiKey_R;
+        case 'S': return ImGuiKey_S;
+        case 'T': return ImGuiKey_T;
+        case 'U': return ImGuiKey_U;
+        case 'V': return ImGuiKey_V;
+        case 'W': return ImGuiKey_W;
+        case 'X': return ImGuiKey_X;
+        case 'Y': return ImGuiKey_Y;
+        case 'Z': return ImGuiKey_Z;
+        case VK_F1: return ImGuiKey_F1;
+        case VK_F2: return ImGuiKey_F2;
+        case VK_F3: return ImGuiKey_F3;
+        case VK_F4: return ImGuiKey_F4;
+        case VK_F5: return ImGuiKey_F5;
+        case VK_F6: return ImGuiKey_F6;
+        case VK_F7: return ImGuiKey_F7;
+        case VK_F8: return ImGuiKey_F8;
+        case VK_F9: return ImGuiKey_F9;
+        case VK_F10: return ImGuiKey_F10;
+        case VK_F11: return ImGuiKey_F11;
+        case VK_F12: return ImGuiKey_F12;
+        default: return ImGuiKey_None;
+    }
+}
+// Allow compilation with old Windows SDK. MinGW doesn't have default _WIN32_WINNT/WINVER versions.
+#ifndef WM_MOUSEHWHEEL
+#define WM_MOUSEHWHEEL 0x020E
+#endif
+#ifndef DBT_DEVNODES_CHANGED
+#define DBT_DEVNODES_CHANGED 0x0007
+#endif
+// -------------------------------------------------------------------------------
+
+
 static bool gImGuiAppIconized = false;
 
 // Window Procedure
@@ -100,99 +250,84 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_ACTIVATE:
         gImGuiAppIconized = (HIWORD(wParam) == SIZE_MINIMIZED); // SIZE_MINIMIZED == 1
         //fprintf(stderr,"WM_ACTIVATE %d %d %d gImGuiAppIconized=%d\n",wParam,LOWORD(wParam),HIWORD(wParam),gImGuiAppIconized);
-        return 0;
-    // New-----------------
+        return 0;   
     case WM_KEYDOWN:
-    case WM_SYSKEYDOWN:
-        if (wParam < 256)   io.KeysDown[wParam] = 1;
-        return 0;
     case WM_KEYUP:
+    case WM_SYSKEYDOWN:
     case WM_SYSKEYUP:
-        if (wParam < 256)   io.KeysDown[wParam] = 0;
+    {
+        const bool is_key_down = (message == WM_KEYDOWN || message == WM_SYSKEYDOWN);
+        if (wParam < 256)   {
+            // Obtain virtual key code
+            // (keypad enter doesn't have its own... VK_RETURN with KF_EXTENDED flag means keypad enter, see IM_VK_KEYPAD_ENTER definition for details, it is mapped to ImGuiKey_KeyPadEnter.)
+            int vk = (int)wParam;
+            if ((wParam == VK_RETURN) && (HIWORD(lParam) & KF_EXTENDED))    vk = IM_VK_KEYPAD_ENTER;
+            // Submit key event
+            const ImGuiKey key = ImplWin32VirtualKeyToImGuiKey(vk);
+            const int scancode = (int)LOBYTE(HIWORD(lParam));
+            if (key != ImGuiKey_None) ImplWin32AddKeyEvent(key, is_key_down, vk, scancode);
+            // Submit individual left/right modifier events
+            if (vk == VK_SHIFT) {
+                // Important: Shift keys tend to get stuck when pressed together, missing key-up events are corrected in ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
+                if (IS_VK_DOWN(VK_LSHIFT) == is_key_down) { ImplWin32AddKeyEvent(ImGuiKey_LeftShift, is_key_down, VK_LSHIFT, scancode); }
+                if (IS_VK_DOWN(VK_RSHIFT) == is_key_down) { ImplWin32AddKeyEvent(ImGuiKey_RightShift, is_key_down, VK_RSHIFT, scancode); }
+            }
+            else if (vk == VK_CONTROL)  {
+                if (IS_VK_DOWN(VK_LCONTROL) == is_key_down) { ImplWin32AddKeyEvent(ImGuiKey_LeftCtrl, is_key_down, VK_LCONTROL, scancode); }
+                if (IS_VK_DOWN(VK_RCONTROL) == is_key_down) { ImplWin32AddKeyEvent(ImGuiKey_RightCtrl, is_key_down, VK_RCONTROL, scancode); }
+            }
+            else if (vk == VK_MENU) {
+                if (IS_VK_DOWN(VK_LMENU) == is_key_down) { ImplWin32AddKeyEvent(ImGuiKey_LeftAlt, is_key_down, VK_LMENU, scancode); }
+                if (IS_VK_DOWN(VK_RMENU) == is_key_down) { ImplWin32AddKeyEvent(ImGuiKey_RightAlt, is_key_down, VK_RMENU, scancode); }
+            }
+        }
         return 0;
-    // ---------------------
+    }
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-        if (wParam>=0 /*&& wParam<0x10000*/) io.AddInputCharacter((unsigned int)wParam);
+        //if (wParam>=0 /*&& wParam<0x10000*/) io.((unsigned int)wParam);
+        if (wParam > 0 && wParam < 0x10000) io.AddInputCharacterUTF16((unsigned short)wParam);
         return 0;
     case WM_MOUSEMOVE:
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);      // Mouse position, in pixels (set to -FLT_MAX,-FLT_MAX if no mouse / on another screen, etc.)
+        io.AddMousePosEvent((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
     case WM_MOUSELEAVE:
-        io.MousePos.x = io.MousePos.y = -FLT_MAX;
+        io.AddMousePosEvent(-FLT_MAX,-FLT_MAX);
         return 0;
     case WM_MOUSEWHEEL:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[0] = (wParam&MK_LBUTTON);
+        /*io.MouseDown[0] = (wParam&MK_LBUTTON);
         io.MouseDown[2] = (wParam&MK_MBUTTON);
-        io.MouseDown[1] = (wParam&MK_RBUTTON);
-        io.MouseWheel = GET_WHEEL_DELTA_WPARAM(wParam) > 0  ? 1 : -1;   // it's 120 or -120
+        io.MouseDown[1] = (wParam&MK_RBUTTON);*/
+        io.AddMouseWheelEvent(0.0f, (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA);
         return 0;
-    case WM_LBUTTONDBLCLK:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        gImGuiBindingMouseDblClicked[0] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
+    case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
+    case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
+    case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
+    case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK:
+    {
+        int button = 0;
+        if (message == WM_LBUTTONDOWN || message == WM_LBUTTONDBLCLK) { button = 0; }
+        if (message == WM_RBUTTONDOWN || message == WM_RBUTTONDBLCLK) { button = 1; }
+        if (message == WM_MBUTTONDOWN || message == WM_MBUTTONDBLCLK) { button = 2; }
+        if (message == WM_XBUTTONDOWN || message == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
+        io.AddMouseButtonEvent(button,true);
+        io.AddMousePosEvent((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
-    case WM_MBUTTONDBLCLK:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        gImGuiBindingMouseDblClicked[2] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
-        return 0;
-    case WM_RBUTTONDBLCLK:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        gImGuiBindingMouseDblClicked[1] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
-        return 0;
-    case WM_LBUTTONDOWN:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[0] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
-        return 0;
+    }
     case WM_LBUTTONUP:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[0] = false;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
-        return 0;
-    case WM_MBUTTONDOWN:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[2] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
-        return 0;
-    case WM_MBUTTONUP:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[2] = false;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
-        return 0;
-    case WM_RBUTTONDOWN:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[1] = true;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
-        return 0;
     case WM_RBUTTONUP:
-        io.KeyCtrl = (wParam&MK_CONTROL);
-        io.KeyShift = (wParam&MK_SHIFT);
-        io.KeyAlt = (wParam&MK_ALT);
-        io.MouseDown[1] = false;
-        io.MousePos = ImVec2((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
+    case WM_MBUTTONUP:
+    case WM_XBUTTONUP:
+    {
+        int button = 0;
+        if (message == WM_LBUTTONUP) { button = 0; }
+        if (message == WM_RBUTTONUP) { button = 1; }
+        if (message == WM_MBUTTONUP) { button = 2; }
+        if (message == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
+        io.AddMouseButtonEvent(button,false);
+        io.AddMousePosEvent((float)LOWORD(lParam) * mousePosScale.x, (float)HIWORD(lParam) * mousePosScale.y);
         return 0;
+    }
     default:
         return DefWindowProc( hWnd, message, wParam, lParam );
 
@@ -223,31 +358,7 @@ static void InitImGui(const ImImpl_InitParams* pOptionalInitParams=NULL)	{
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;   // We can honor GetMouseCursor() values
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;    // We can honor io.WantSetMousePos requests (optional, rarely used)
 
-    io.KeyMap[ImGuiKey_Tab] = VK_TAB;             // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
-    io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
-    io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
-    io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
-    io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
-    io.KeyMap[ImGuiKey_PageUp] = VK_PRIOR;
-    io.KeyMap[ImGuiKey_PageDown] = VK_NEXT;
-    io.KeyMap[ImGuiKey_Home] = VK_HOME;
-    io.KeyMap[ImGuiKey_End] = VK_END;
-    io.KeyMap[ImGuiKey_Insert] = VK_INSERT;
-    io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
-    io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
-    io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
-    io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
-    io.KeyMap[ImGuiKey_Space] = VK_SPACE;
-#   ifndef __EMSCRIPTEN__  // emscripten doesn't like it (and triggers a 'NewFrameSanityCheck' or something like that [But tested only with SDL2 binding, so it might work])
-    io.KeyMap[ImGuiKey_KeypadEnter] = VK_RETURN;
-#   endif
-
-    io.KeyMap[ImGuiKey_A] = 'A';
-    io.KeyMap[ImGuiKey_C] = 'C';
-    io.KeyMap[ImGuiKey_V] = 'V';
-    io.KeyMap[ImGuiKey_X] = 'X';
-    io.KeyMap[ImGuiKey_Y] = 'Y';
-    io.KeyMap[ImGuiKey_Z] = 'Z';
+    io.BackendUsingLegacyKeyArrays = 0;
 
     //io.RenderDrawListsFn = ImImpl_RenderDrawLists;
     //io.ImeSetInputScreenPosFn = ImImpl_ImeSetInputScreenPosFn;
@@ -295,7 +406,7 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     // create main window
     window = hWnd = CreateWindow(
         _T("ImGuiApp"),
-        (pOptionalInitParams && pOptionalInitParams->gWindowTitle[0]!='\0') ? (TCHAR*) &pOptionalInitParams->gWindowTitle[0] : _T("ImGui Direct3D9 Example"),
+        (pOptionalInitParams && pOptionalInitParams->gWindowTitle[0]!='\0') ? (TCHAR*) &pOptionalInitParams->gWindowTitle[0] : _T("Dear ImGui Direct3D9 Example"),
         WS_CAPTION | WS_VISIBLE | WS_OVERLAPPEDWINDOW,
         0, 0,
         width,
@@ -315,7 +426,8 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     g_d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
     g_d3dpp.EnableAutoDepthStencil = TRUE;
     g_d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
-    g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+    g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_ONE;           // Present with vsync
+    //g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;   // Present without vsync, maximum unthrottled framerate
 
     // Create the D3DDevice
     if (pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &g_d3dpp, &g_pd3dDevice) < 0)
@@ -350,7 +462,6 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
     while ( !quit )
     {
 
-        for (size_t i = 0; i < 5; i++) gImGuiBindingMouseDblClicked[i] = false;   // We manually set it (otherwise it won't work with low frame rates)
         // check for messages
         if ( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE )  )
         {
@@ -394,31 +505,11 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
             {
                 io.DeltaTime = deltaTime;
 
-                // Setup inputs (why I didn't use the event loop?)
-                BYTE keystate[256];
-                ::GetKeyboardState(keystate);
-                io.KeyCtrl = (keystate[VK_CONTROL] & 0x80) != 0;
-                io.KeyShift = (keystate[VK_SHIFT] & 0x80) != 0;
-                io.KeyAlt = (keystate[VK_MENU] & 0x80) != 0;
-                const bool capsLockDown = (keystate[VK_CAPITAL] & 0x80) != 0;
-                const bool lowercaseWithoutCtrl = !io.KeyCtrl && (!(io.KeyShift || capsLockDown));
-                for (int i = 0; i < 256; i++)   io.KeysDown[i] = (keystate[i] & 0x80) != 0;
-                if (lowercaseWithoutCtrl)   {
-                    for (int i='A';i<='Z';i++) {
-                        io.KeysDown[i-'A'+'a'] = io.KeysDown[i];
-                        io.KeysDown[i] = false;
-                    }
-                }
-                for (int key=VK_F1;key<VK_F12;key++)  {
-                    const int i = key-VK_F1;
-                    const bool prevState = gImGuiFunctionKeyDown[i];
-                    const bool down = (keystate[key] & 0x80) != 0;  // Or just query "key" only, if (key>=256)
-                    gImGuiFunctionKeyDown[i] = down;
-                    if (down!=prevState)    {
-                        if (down) gImGuiFunctionKeyPressed[i] = true;
-                        else gImGuiFunctionKeyReleased[i] = true;
-                    }
-                }
+                // Process workarounds for known Windows key handling issues
+                ImplWin32ProcessKeyEventsWorkarounds();
+
+                // Update key modifiers
+                ImplWin32UpdateKeyModifiers();
 
                 if (!gImGuiPaused)	{
                     // Set OS mouse position if requested last frame by io.WantSetMousePos flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
@@ -449,7 +540,6 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
                     gImGuiCapturesInput = false;
                 }
 
-                for (size_t i = 0; i < 5; i++) io.MouseDoubleClicked[i]=gImGuiBindingMouseDblClicked[i];   // We manually set it (otherwise it won't work with low frame rates)
             }
 
             if (gImGuiPreDrawGLCallback) gImGuiPreDrawGLCallback();
@@ -483,9 +573,6 @@ int ImImpl_WinMain(const ImImpl_InitParams* pOptionalInitParams,HINSTANCE hInsta
         }
         else g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
         //--------------------------------------------------------------------------------
-
-        // Reset additional special keys composed states (mandatory):
-        for (int i=0;i<12;i++) {gImGuiFunctionKeyPressed[i] = gImGuiFunctionKeyReleased[i]= false;}
 
         // Handle clamped FPS:
         if (gImGuiAppIconized) WaitFor(500);

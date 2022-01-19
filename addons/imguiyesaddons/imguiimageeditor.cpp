@@ -578,7 +578,7 @@ static unsigned char* webp_load_from_memory(const char* buffer,int size,int& w,i
 
 #ifdef QOI_H
 #   ifndef IMGUIIMAGEEDITOR_QOI_DEFAULT_COLORSPACE
-#       define IMGUIIMAGEEDITOR_QOI_DEFAULT_COLORSPACE /*QOI_SRGB,*/ QOI_SRGB_LINEAR_ALPHA /*or QOI_LINEAR*/
+#       define IMGUIIMAGEEDITOR_QOI_DEFAULT_COLORSPACE QOI_SRGB/*QOI_SRGB or QOI_LINEAR*/
 //      The colorspace is purely informative. It will be saved to the file header, but does not affect en-/decoding in any way.
 #   endif
 static bool qoi_save_to_memory(const unsigned char* pixels,int w,int h,int c,ImVector<char>& rv) {
@@ -5502,7 +5502,11 @@ struct StbImage {
             //ImGui::Separator();
             //labelSize.y+=1.0f;
             ImGui::EndGroup();
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Press S to show/hide the image name panel");
+            if (ImGui::IsItemHovered()) {
+                const ImGui::ImageEditor::Style& ies = ImGui::ImageEditor::Style::Get();
+                const char* keyName = ImGui::GetKeyName(ies.keyShowHideImageNamePanel);
+                if (keyName) ImGui::SetTooltip("Press %s to show/hide the image name panel",keyName);
+            }
         }
 
         //const ImGuiWindowFlags showBorders = (window->Flags&ImGuiWindowFlags_ShowBorders);
@@ -5628,14 +5632,17 @@ struct StbImage {
                 }
 
                 if (mrs.anyPanelHovered)  {
-                    if (ImGui::IsKeyPressed(ies.keySave,false)) {
-                        if (io.KeyCtrl) mrs.mustSave=true;
-                        else mrs.mustToggleImageNamePanel = true;
-                    }
                     if (io.KeyCtrl) {
-                        const bool zPressed = ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Z],false);
-                        if ((io.KeyShift && zPressed) || ImGui::IsKeyPressed(io.KeyMap[ImGuiKey_Y],false)) mrs.mustRedo=true;
+                        // Ctrl+S
+                        if (ImGui::IsKeyPressed(ies.keySave,false)) mrs.mustSave=true;
+                        // Ctrl+Z, Ctrl+Shift+Z (or Ctrl+Y)
+                        const bool zPressed = ImGui::IsKeyPressed(ImGuiKey_Z,false);
+                        if ((io.KeyShift && zPressed) || ImGui::IsKeyPressed(ImGuiKey_Y,false)) mrs.mustRedo=true;
                         else if (zPressed) mrs.mustUndo=true;
+                    }
+                    else if (io.KeyMods==0) {
+                        // S
+                        if (ImGui::IsKeyPressed(ies.keyShowHideImageNamePanel,false)) mrs.mustToggleImageNamePanel = true;
                     }
                 }
 
@@ -6513,7 +6520,11 @@ struct StbImage {
 #                           endif // EMSCRIPTEN_SAVE_SHELL
                         }
                     }
-                    if (!canDownload && ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Ctrl+S");
+                    if (!canDownload && ImGui::IsItemHovered()) {
+                        const ImGui::ImageEditor::Style& ies = ImGui::ImageEditor::Style::Get();
+                        const char* keyName = ImGui::GetKeyName(ies.keySave);
+                        if (keyName) ImGui::SetTooltip("Ctrl+%s",keyName);
+                    }
                     ImGui::SameLine();
                 }
                 if (fileExtCanBeSaved && c==4) {
@@ -7317,7 +7328,12 @@ ImageEditor::Style::Style() : splitterSize(-1),splitterColor(-1.f,1.f,1.f,1.f) {
     strcpy(&arrowsChars[1][0],">");
     strcpy(&arrowsChars[2][0],"^");
     strcpy(&arrowsChars[3][0],"v");
-    keySave = (int) 's';
+#   ifndef __EMSCRIPTEN__
+    keySave = ImGuiKey_S;
+#   else
+    keySave = ImGuiKey_G;   // Ctrl+S is more often overridden by the browser
+#   endif
+    keyShowHideImageNamePanel = ImGuiKey_S;
 }
 
 

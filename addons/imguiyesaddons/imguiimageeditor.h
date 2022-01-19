@@ -272,10 +272,11 @@ public:
 
     class Style {
         public:
-        float splitterSize;      // default: -1
-        ImVec4 splitterColor;    // default: .x<0
-        char arrowsChars[4][5];   // default: "<",">","^","v"
-        int keySave;             // default: (int)'s'. The ImGui key index for saving the image when CTRL is down
+        float splitterSize;             // default: -1
+        ImVec4 splitterColor;           // default: .x<0
+        char arrowsChars[4][5];         // default: "<",">","^","v"
+        int keySave;                    // default: ImGuiKey_S. The ImGuiKey_ for saving the image when CTRL is down
+        int keyShowHideImageNamePanel;  // default: ImGuiKey_S. The ImGuiKey_ for showing/hiding the image name panel
         IMGUI_API Style();
         static Style style;
         inline static Style& Get() {return style;}        

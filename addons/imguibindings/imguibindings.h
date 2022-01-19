@@ -138,10 +138,7 @@ extern float gImGuiInverseFPSClampOutsideImGui;// = -1.0f;    // CAN'T BE 0. < 0
 extern bool gImGuiDynamicFPSInsideImGui;                   // Dynamic FPS inside ImGui: from 5 to gImGuiInverseFPSClampInsideImGui
 extern bool gImGuiCapturesInput;             // When false the input events can be directed somewhere else
 extern bool gImGuiWereOutsideImGui;
-extern bool gImGuiBindingMouseDblClicked[5];
-extern bool gImGuiFunctionKeyDown[12];
-extern bool gImGuiFunctionKeyPressed[12];
-extern bool gImGuiFunctionKeyReleased[12];
+//extern bool gImGuiBindingMouseDblClicked[5];
 extern int gImGuiNumTextureBindingsPerFrame;    // read-only
 extern unsigned int gImGuiDefaultFontBuilderFlags;
 typedef void (*ImImplVoidDelegate)();
@@ -245,7 +242,11 @@ struct ImImpl_InitParams	{
 				gWindowTitle[1023]='\0';
 			}
 		}
-		else strcat(gWindowTitle,"ImGui OpenGL Example");
+#       ifndef IMGUI_USE_DIRECT3D9_BINDING
+        else strcat(gWindowTitle,"Dear ImGui OpenGL Example");
+#       else
+        else strcat(gWindowTitle,"Dear ImGui Direct3D9 Example");
+#       endif
 
         if (OptionalTTFFilePath && strlen(OptionalTTFFilePath)>0)
             fonts.push_back(FontData(OptionalTTFFilePath,OptionalTTFFontSizeInPixels,OptionalTTFGlyphRanges,pFontConfig));
@@ -279,7 +280,11 @@ struct ImImpl_InitParams	{
                 gWindowTitle[1023]='\0';
             }
         }
-        else strcat(gWindowTitle,"ImGui OpenGL Example");
+#       ifndef IMGUI_USE_DIRECT3D9_BINDING
+        else strcat(gWindowTitle,"Dear ImGui OpenGL Example");
+#       else
+        else strcat(gWindowTitle,"Dear ImGui Direct3D9 Example");
+#       endif
     }
 
     static float DefaultFontSizeOverrideInPixels;   // If we want to override the size of the default font (13.f)
