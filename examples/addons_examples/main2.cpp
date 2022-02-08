@@ -414,6 +414,51 @@ void TabContentProvider(ImGui::TabWindow::TabLabel* tab,ImGui::TabWindow& parent
         ImGui::Text("Disabled for this build.");
 #       endif //YES_IMGUIPDFVIEWER || NO_IMGUIFILESYSTEM
         }
+        else if (tab->matchLabel("Virtual Keyboard"))  {
+#       ifndef NO_IMGUIVARIOUSCONTROLS
+            static int keyboardLogicalLayoutIndex = ImGui::KLL_QWERTY;
+            static int keyboardPhysicalLayoutIndex = ImGui::KPL_ISO;
+            static ImGui::VirtualKeyboardFlags virtualKeyboardFlags = ImGui::VirtualKeyboardFlags_ShowAllBlocks; // ShowAllBlocks displays all the keyboard parts
+            static ImGuiKey lastKeyReturned = ImGuiKey_COUNT;
+
+            const float w = ImGui::GetContentRegionAvail().x*0.15f;
+            ImGui::SetNextItemWidth(w);
+            ImGui::Combo("Logical Layout##VK",&keyboardLogicalLayoutIndex,ImGui::GetKeyboardLogicalLayoutNames(),ImGui::KLL_COUNT);
+            ImGui::SameLine(0.f,w);
+            ImGui::SetNextItemWidth(w);
+            ImGui::Combo("Physical Layout##VK",&keyboardPhysicalLayoutIndex,ImGui::GetKeyboardPhysicalLayoutNames(),ImGui::KPL_COUNT);
+
+
+            static float scaling = 1.0f;
+            ImGui::SetNextItemWidth(w*1.5f);
+            ImGui::DragFloat("scaling##WS", &scaling, 0.005f, 0.3f, 2.f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SameLine();if (ImGui::SmallButton("Reset##WS_Scaling_Reset")) scaling = 1.f;
+
+            ImGui::SameLine(0.f,w*0.5f);
+
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.6f);
+
+            static const char* tooltips[6] = {"ShowBaseBlock","ShowFunctionBlock","ShowArrowBlock","ShowKeypadBlock","NoMouseInteraction","NoKeyboardInteraction"};
+            int flagHovered = -1;
+            if (ImGui::CheckboxFlags("Flags##VKFlags",&virtualKeyboardFlags,6,1,1,0,&flagHovered)) lastKeyReturned = ImGuiKey_COUNT;;
+            if (flagHovered>=0 && flagHovered<6) ImGui::SetTooltip("hold SHIFT to toggle the \"%s\" flag",tooltips[flagHovered]);
+
+
+            ImGui::Spacing();
+
+            ImGuiKey keyReturned =  ImGuiKey_COUNT;
+
+            ImGui::SetWindowFontScale(scaling);
+            keyReturned = ImGui::VirtualKeyboard(virtualKeyboardFlags,(ImGui::KeyboardLogicalLayout) keyboardLogicalLayoutIndex,(ImGui::KeyboardPhysicalLayout) keyboardPhysicalLayoutIndex);
+            ImGui::SetWindowFontScale(1.0f);    // reset scaling
+
+            if (keyReturned!=ImGuiKey_COUNT) lastKeyReturned = keyReturned;
+            if (lastKeyReturned!=ImGuiKey_COUNT) ImGui::Text("Last returned ImGuiKey: \"%s\"",lastKeyReturned==ImGuiKey_None?"NONE":ImGui::GetKeyName(lastKeyReturned));
+#       else //NO_IMGUIVARIOUSCONTROLS
+        ImGui::Text("Disabled for this build.");
+#       endif //NO_IMGUIVARIOUSCONTROLS
+        }
+
         else ImGui::Text("Here is the content of tab label: \"%s\"\n",tab->getLabel());
         ImGui::PopID();
     }
@@ -808,6 +853,9 @@ if (!tabWindow.isInited()) {
         tabWindow.addTabLabel("dummyPdfPath.pdf","",false,true,NULL,"",0,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
 #       endif //YES_IMGUIPDFVIEWER
 #       endif //NO_IMGUIFILESYSTEM
+#       ifndef NO_IMGUIVARIOUSCONTROLS
+        tabWindow.addTabLabel("Virtual Keyboard","",false);
+#       endif //NO_IMGUIVARIOUSCONTROLS
     }
 
 }
@@ -1191,8 +1239,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
             0x0020, 0x00FF, // Basic Latin + Latin Supplement
             0x20AC, 0x20AC,	// €
             0x2122, 0x2122,	// ™
-            0x2196, 0x2196, // ↖
+            0x2190, 0x2193, // ←↑→↓ arrows + pageUp/pageDown + backspace fallback
+            0x2196, 0x2196, // ↖    home
+            0x21B5, 0x21B5, // ↵    enter
+            0x21B9, 0x21B9, // ↹    tab
+            0x21E7, 0x21E7, // ⇧    shift
             0x21D6, 0x21D6, // ⇖
+            0x2212, 0x2212, // −    keypad subtract
+            0x2215, 0x2215, // ∗    keypad asterisk
             0x2B01, 0x2B01, // ⬁
             0x2B09, 0x2B09, // ⬉
             0x2921, 0x2922, // ⤡ ⤢
@@ -1203,6 +1257,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
             0x25B6, 0x25BB, //: ▶ ▷ ▸ ▹ ► ▻
             0x25C0, 0x25C5, // ◀ ◁ ◂ ◃ ◄ ◅
             0x25A0, 0x25A3, // ■ □ ▢ ▣
+            0x27F5, 0x27F5, // ⟵    backspace // this is used by ImGui::VirtualKeyboard(...) too
             0 // € ™ ↖ ⇖ ⬁ ⬉ ⤡ ⤢ ☺ ♪
         };
     const float fontSizeInPixels = 18.f;

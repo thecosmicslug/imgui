@@ -68,12 +68,10 @@ static void ImplWin32ProcessKeyEventsWorkarounds()   {
 }
 static void ImplWin32UpdateKeyModifiers()   {
     ImGuiIO& io = ImGui::GetIO();
-    ImGuiKeyModFlags key_mods =
-        ((IS_VK_DOWN(VK_LCONTROL) || IS_VK_DOWN(VK_RCONTROL)) ? ImGuiKeyModFlags_Ctrl : 0) |
-        ((IS_VK_DOWN(VK_LSHIFT) || IS_VK_DOWN(VK_RSHIFT)) ? ImGuiKeyModFlags_Shift : 0) |
-        ((IS_VK_DOWN(VK_LMENU) || IS_VK_DOWN(VK_RMENU)) ? ImGuiKeyModFlags_Alt : 0) |
-        ((IS_VK_DOWN(VK_LWIN) || IS_VK_DOWN(VK_RWIN)) ? ImGuiKeyModFlags_Super : 0);
-    io.AddKeyModsEvent(key_mods);
+    io.AddKeyEvent(ImGuiKey_ModCtrl,(IS_VK_DOWN(VK_LCONTROL) || IS_VK_DOWN(VK_RCONTROL)) ? true : false);
+    io.AddKeyEvent(ImGuiKey_ModShift,(IS_VK_DOWN(VK_LSHIFT) || IS_VK_DOWN(VK_RSHIFT)) ? true : false);
+    io.AddKeyEvent(ImGuiKey_ModAlt,(IS_VK_DOWN(VK_LMENU) || IS_VK_DOWN(VK_RMENU)) ? true : false);
+    io.AddKeyEvent(ImGuiKey_ModSuper,(IS_VK_DOWN(VK_LWIN) || IS_VK_DOWN(VK_RWIN)) ? true : false);
 }
 #define IM_VK_KEYPAD_ENTER      (VK_RETURN + 256)   // There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
 static ImGuiKey ImplWin32VirtualKeyToImGuiKey(WPARAM wParam)    {

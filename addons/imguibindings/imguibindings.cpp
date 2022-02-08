@@ -1954,119 +1954,15 @@ void ImImpl_NewFramePaused()    {
     g.TooltipOverrideCount = 0;
     g.WindowsActiveCount = 0;
 
+    // Process input queue (trickle as many events as possible)
+    g.InputEventsTrail.resize(0);
+    ImGui::UpdateInputEvents(g.IO.ConfigInputTrickleEventQueue);
+
     // Update keyboard input state
-    // cloned from  imgui.cpp: static void ImGui::UpdateKeyboardInputs()
-    {
-        ImGuiContext& g = *GImGui;
-        ImGuiIO& io = g.IO;
+    ImGui::UpdateKeyboardInputs();
 
-        // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
-        io.KeyMods = ImGui::GetMergedKeyModFlags();
-
-        // Import legacy keys or verify they are not used
-    #ifndef IMGUI_DISABLE_OBSOLETE_KEYIO
-        if (io.BackendUsingLegacyKeyArrays == 0)
-        {
-            // Backend used new io.AddKeyEvent() API: Good! Verify that old arrays are never written too.
-            for (int n = 0; n < IM_ARRAYSIZE(io.KeysDown); n++)
-                IM_ASSERT(io.KeysDown[n] == false && "Backend needs to either only use io.AddKeyEvent(), either only fill legacy io.KeysDown[] + io.KeyMap[]. Not both!");
-        }
-        else
-        {
-            if (g.FrameCount == 0)
-                for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
-                    IM_ASSERT(g.IO.KeyMap[n] == -1 && "Backend is not allowed to write to io.KeyMap[0..511]!");
-
-            // Build reverse KeyMap (Named -> Legacy)
-            for (int n = ImGuiKey_NamedKey_BEGIN; n < ImGuiKey_NamedKey_END; n++)
-                if (io.KeyMap[n] != -1)
-                {
-                    IM_ASSERT(ImGui::IsLegacyKey((ImGuiKey)io.KeyMap[n]));
-                    io.KeyMap[io.KeyMap[n]] = n;
-                }
-
-            // Import legacy keys into new ones
-            for (int n = ImGuiKey_LegacyNativeKey_BEGIN; n < ImGuiKey_LegacyNativeKey_END; n++)
-                if (io.KeysDown[n] || io.BackendUsingLegacyKeyArrays == 1)
-                {
-                    const ImGuiKey key = (ImGuiKey)(io.KeyMap[n] != -1 ? io.KeyMap[n] : n);
-                    IM_ASSERT(io.KeyMap[n] == -1 || ImGui::IsNamedKey(key));
-                    io.KeysData[key].Down = io.KeysDown[n];
-                    io.BackendUsingLegacyKeyArrays = 1;
-                }
-        }
-    #endif
-
-        // Update keys
-        for (int i = 0; i < IM_ARRAYSIZE(io.KeysData); i++)
-        {
-            ImGuiKeyData& key_data = io.KeysData[i];
-            key_data.DownDurationPrev = key_data.DownDuration;
-            key_data.DownDuration = key_data.Down ? (key_data.DownDuration < 0.0f ? 0.0f : key_data.DownDuration + io.DeltaTime) : -1.0f;
-        }
-    }
-
-    // Update mouse inputs state
-    // cloned from imgui.cpp: static void ImGui::UpdateMouseInputs()
-    {
-        ImGuiContext& g = *GImGui;
-        ImGuiIO& io = g.IO;
-
-        // Round mouse position to avoid spreading non-rounded position (e.g. UpdateManualResize doesn't support them well)
-        if (ImGui::IsMousePosValid(&io.MousePos))
-            io.MousePos = g.MouseLastValidPos = ImFloor(io.MousePos);
-
-        // If mouse just appeared or disappeared (usually denoted by -FLT_MAX components) we cancel out movement in MouseDelta
-        if (ImGui::IsMousePosValid(&io.MousePos) && ImGui::IsMousePosValid(&io.MousePosPrev))
-            io.MouseDelta = io.MousePos - io.MousePosPrev;
-        else
-            io.MouseDelta = ImVec2(0.0f, 0.0f);
-
-        // If mouse moved we re-enable mouse hovering in case it was disabled by gamepad/keyboard. In theory should use a >0.0f threshold but would need to reset in everywhere we set this to true.
-        if (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f)
-            g.NavDisableMouseHover = false;
-
-        io.MousePosPrev = io.MousePos;
-        for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
-        {
-            io.MouseClicked[i] = io.MouseDown[i] && io.MouseDownDuration[i] < 0.0f;
-            io.MouseClickedCount[i] = 0; // Will be filled below
-            io.MouseReleased[i] = !io.MouseDown[i] && io.MouseDownDuration[i] >= 0.0f;
-            io.MouseDownDurationPrev[i] = io.MouseDownDuration[i];
-            io.MouseDownDuration[i] = io.MouseDown[i] ? (io.MouseDownDuration[i] < 0.0f ? 0.0f : io.MouseDownDuration[i] + io.DeltaTime) : -1.0f;
-            if (io.MouseClicked[i])
-            {
-                bool is_repeated_click = false;
-                if ((float)(g.Time - io.MouseClickedTime[i]) < io.MouseDoubleClickTime)
-                {
-                    ImVec2 delta_from_click_pos = ImGui::IsMousePosValid(&io.MousePos) ? (io.MousePos - io.MouseClickedPos[i]) : ImVec2(0.0f, 0.0f);
-                    if (ImLengthSqr(delta_from_click_pos) < io.MouseDoubleClickMaxDist * io.MouseDoubleClickMaxDist)
-                        is_repeated_click = true;
-                }
-                if (is_repeated_click)
-                    io.MouseClickedLastCount[i]++;
-                else
-                    io.MouseClickedLastCount[i] = 1;
-                io.MouseClickedTime[i] = g.Time;
-                io.MouseClickedPos[i] = io.MousePos;
-                io.MouseClickedCount[i] = io.MouseClickedLastCount[i];
-                io.MouseDragMaxDistanceSqr[i] = 0.0f;
-            }
-            else if (io.MouseDown[i])
-            {
-                // Maintain the maximum distance we reaching from the initial click position, which is used with dragging threshold
-                float delta_sqr_click_pos = ImGui::IsMousePosValid(&io.MousePos) ? ImLengthSqr(io.MousePos - io.MouseClickedPos[i]) : 0.0f;
-                io.MouseDragMaxDistanceSqr[i] = ImMax(io.MouseDragMaxDistanceSqr[i], delta_sqr_click_pos);
-            }
-
-            // We provide io.MouseDoubleClicked[] as a legacy service
-            io.MouseDoubleClicked[i] = (io.MouseClickedCount[i] == 2);
-
-            // Clicking any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
-            if (io.MouseClicked[i])
-                g.NavDisableMouseHover = false;
-        }
-    }
+    // Update mouse input state
+    ImGui::UpdateMouseInputs();
 
     // Calculate frame-rate for the user, as a purely luxurious feature
     g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];

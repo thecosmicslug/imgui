@@ -107,7 +107,7 @@ static const int glfwCursorIds[] = {
 
 //static
 GLFWwindow* window;
-static bool g_MousePressed[5] = {false, false, false, false, false };
+//static bool g_MousePressed[5] = {false, false, false, false, false };
 static ImVec2 mousePosScale(1.0f, 1.0f);
 
 
@@ -250,16 +250,24 @@ static inline ImGuiKey glew_key_to_ImGuiKey(int key)  {
         default: return ImGuiKey_None;
     }
 }
+/*static inline void glfw_window_update_ImGuiKeyModFlags(int mods)   {
+    // cloned from imgui/backends/imgui_impl_glfw.cpp
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiKeyModFlags key_mods =
+        ((mods & GLFW_MOD_CONTROL) ? ImGuiKeyModFlags_Ctrl : 0) |
+        ((mods & GLFW_MOD_SHIFT) ? ImGuiKeyModFlags_Shift : 0) |
+        ((mods & GLFW_MOD_ALT) ? ImGuiKeyModFlags_Alt : 0) |
+        ((mods & GLFW_MOD_SUPER) ? ImGuiKeyModFlags_Super : 0);
+    io.AddKeyModsEvent(key_mods);
+}*/
 static inline void glfw_window_update_ImGuiKeyModFlags()   {
     // cloned from imgui/backends/imgui_impl_glfw.cpp
     IM_ASSERT(window);
     ImGuiIO& io = ImGui::GetIO();
-    ImGuiKeyModFlags key_mods =
-            (((glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS)) ? ImGuiKeyModFlags_Ctrl : 0) |
-            (((glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)) ? ImGuiKeyModFlags_Shift : 0) |
-            (((glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS)) ? ImGuiKeyModFlags_Alt : 0) |
-            (((glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS)) ? ImGuiKeyModFlags_Super : 0);
-    io.AddKeyModsEvent(key_mods);
+    io.AddKeyEvent(ImGuiKey_ModCtrl,((glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS))?true:false);
+    io.AddKeyEvent(ImGuiKey_ModShift,((glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS))?true:false);
+    io.AddKeyEvent(ImGuiKey_ModAlt,((glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS))?true:false);
+    io.AddKeyEvent(ImGuiKey_ModSuper,((glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS))?true:false);
 }
 static inline int glfw_translate_untranslated_key(int key, int scancode)   {
 // cloned from imgui/backends/imgui_impl_glfw.cpp
@@ -270,10 +278,10 @@ static inline int glfw_translate_untranslated_key(int key, int scancode)   {
     // See https://github.com/glfw/glfw/issues/1502 for details.
     // Adding a workaround to undo this (so our keys are translated->untranslated->translated, likely a lossy process).
     // This won't cover edge cases but this is at least going to cover common cases.
+    if (key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_EQUAL)   return key;
     const char* key_name = glfwGetKeyName(key, scancode);
-    if (key_name && key_name[0] != 0 && key_name[1] == 0)
-    {
-        const char char_names[] = "'-=[]\\,;\'./";
+    if (key_name && key_name[0] != 0 && key_name[1] == 0)    {
+        const char char_names[] = "`-=[]\\,;\'./";
         const int char_keys[] = { GLFW_KEY_GRAVE_ACCENT, GLFW_KEY_MINUS, GLFW_KEY_EQUAL, GLFW_KEY_LEFT_BRACKET, GLFW_KEY_RIGHT_BRACKET, GLFW_KEY_BACKSLASH, GLFW_KEY_COMMA, GLFW_KEY_SEMICOLON, GLFW_KEY_APOSTROPHE, GLFW_KEY_PERIOD, GLFW_KEY_SLASH, 0 };
         IM_ASSERT(IM_ARRAYSIZE(char_names) == IM_ARRAYSIZE(char_keys));
         if (key_name[0] >= '0' && key_name[0] <= '9')               { key = GLFW_KEY_0 + (key_name[0] - '0'); }
@@ -310,6 +318,11 @@ static void glfw_window_size_callback(GLFWwindow* /*window*/,int w,int h)  {
     ResizeGL(w,h);
 }
 static void glfw_mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int mods)	{
+    glfw_window_update_ImGuiKeyModFlags(/*mods*/);  // on my system, if I pass 'mods' here, I get wrong results...
+                                                    // (I've commented out the overload that takes 'mods' in the code above)
+    ImGuiIO& io = ImGui::GetIO();
+    if (button >= 0 && button < ImGuiMouseButton_COUNT)
+        io.AddMouseButtonEvent(button, action == GLFW_PRESS);
     // Single clicks are handled once per frame in 'ImImplMainLoopFrame(...)'
     // Handling double-clicks manually is deprecated AFAICS
     /* ImGuiIO& io = ImGui::GetIO();
@@ -343,6 +356,9 @@ static void glfw_scroll_callback(GLFWwindow* /*window*/, double xoffset, double 
 
 static void glfw_key_callback(GLFWwindow* /*window*/, int key, int scancode, int action, int /*mods*/)	{
     if (action != GLFW_PRESS && action != GLFW_RELEASE) return;
+    glfw_window_update_ImGuiKeyModFlags(/*mods*/);  // on my system, if I pass 'mods' here, I get wrong results...
+                                                    // (I've commented out the overload that takes 'mods' in the code above)
+
     const bool down = (action==GLFW_PRESS);
     key = glfw_translate_untranslated_key(key,scancode);
 
@@ -551,6 +567,104 @@ ImImplMainLoopFrameStruct() : done(false) {}
 };
 
 
+// Update gamepad inputs
+static void glfw_Update_gamepads()   {
+#   define GLFW_HAS_GAMEPAD_API    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwGetGamepadState() new api
+#   define IMIMPL_SATURATE(V)   ((V)<0.0f?0.0f:(V)>1.0f?1.0f:(V))
+    ImGuiIO& io = ImGui::GetIO();
+    if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)  return;
+
+    io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+
+    static bool gEmulateGamepadWithKeyboard =   // Intended mainly for __EMSCRIPTEN__ to replace NavEnableKeyboard, that does not work on browsers
+            false;
+            //true;
+
+    if (!gEmulateGamepadWithKeyboard)   {
+#       if GLFW_HAS_GAMEPAD_API
+            GLFWgamepadstate gamepad;
+            if (!glfwGetGamepadState(GLFW_JOYSTICK_1, &gamepad))    return;
+#           define MAP_BUTTON(KEY_NO, BUTTON_NO, _UNUSED)          do { io.AddKeyEvent(KEY_NO, gamepad.buttons[BUTTON_NO] != 0); } while (0)
+#           define MAP_ANALOG(KEY_NO, AXIS_NO, _UNUSED, V0, V1)    do { float v = gamepad.axes[AXIS_NO]; v = (v - V0) / (V1 - V0); io.AddKeyAnalogEvent(KEY_NO, v > 0.10f, IMIMPL_SATURATE(v)); } while (0)
+#       else
+            int axes_count = 0, buttons_count = 0;
+            const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axes_count);
+            const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttons_count);
+            if (axes_count == 0 || buttons_count == 0)  return;
+#           define MAP_BUTTON(KEY_NO, _UNUSED, BUTTON_NO)          do { io.AddKeyEvent(KEY_NO, (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS)); } while (0)
+#           define MAP_ANALOG(KEY_NO, _UNUSED, AXIS_NO, V0, V1)    do { float v = (axes_count > AXIS_NO) ? axes[AXIS_NO] : V0; v = (v - V0) / (V1 - V0); io.AddKeyAnalogEvent(KEY_NO, v > 0.10f, IMIMPL_SATURATE(v)); } while (0)
+#       endif
+        io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+        MAP_BUTTON(ImGuiKey_GamepadStart,       GLFW_GAMEPAD_BUTTON_START,          7);
+        MAP_BUTTON(ImGuiKey_GamepadBack,        GLFW_GAMEPAD_BUTTON_BACK,           6);
+        MAP_BUTTON(ImGuiKey_GamepadFaceDown,    GLFW_GAMEPAD_BUTTON_A,              0);     // Xbox A, PS Cross
+        MAP_BUTTON(ImGuiKey_GamepadFaceRight,   GLFW_GAMEPAD_BUTTON_B,              1);     // Xbox B, PS Circle
+        MAP_BUTTON(ImGuiKey_GamepadFaceLeft,    GLFW_GAMEPAD_BUTTON_X,              2);     // Xbox X, PS Square
+        MAP_BUTTON(ImGuiKey_GamepadFaceUp,      GLFW_GAMEPAD_BUTTON_Y,              3);     // Xbox Y, PS Triangle
+        MAP_BUTTON(ImGuiKey_GamepadDpadLeft,    GLFW_GAMEPAD_BUTTON_DPAD_LEFT,      13);
+        MAP_BUTTON(ImGuiKey_GamepadDpadRight,   GLFW_GAMEPAD_BUTTON_DPAD_RIGHT,     11);
+        MAP_BUTTON(ImGuiKey_GamepadDpadUp,      GLFW_GAMEPAD_BUTTON_DPAD_UP,        10);
+        MAP_BUTTON(ImGuiKey_GamepadDpadDown,    GLFW_GAMEPAD_BUTTON_DPAD_DOWN,      12);
+        MAP_BUTTON(ImGuiKey_GamepadL1,          GLFW_GAMEPAD_BUTTON_LEFT_BUMPER,    4);
+        MAP_BUTTON(ImGuiKey_GamepadR1,          GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER,   5);
+        MAP_ANALOG(ImGuiKey_GamepadL2,          GLFW_GAMEPAD_AXIS_LEFT_TRIGGER,     4,      -0.75f,  +1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadR2,          GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER,    5,      -0.75f,  +1.0f);
+        MAP_BUTTON(ImGuiKey_GamepadL3,          GLFW_GAMEPAD_BUTTON_LEFT_THUMB,     8);
+        MAP_BUTTON(ImGuiKey_GamepadR3,          GLFW_GAMEPAD_BUTTON_RIGHT_THUMB,    9);
+        MAP_ANALOG(ImGuiKey_GamepadLStickLeft,  GLFW_GAMEPAD_AXIS_LEFT_X,           0,      -0.25f,  -1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadLStickRight, GLFW_GAMEPAD_AXIS_LEFT_X,           0,      +0.25f,  +1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadLStickUp,    GLFW_GAMEPAD_AXIS_LEFT_Y,           1,      -0.25f,  -1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadLStickDown,  GLFW_GAMEPAD_AXIS_LEFT_Y,           1,      +0.25f,  +1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadRStickLeft,  GLFW_GAMEPAD_AXIS_RIGHT_X,          2,      -0.25f,  -1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadRStickRight, GLFW_GAMEPAD_AXIS_RIGHT_X,          2,      +0.25f,  +1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadRStickUp,    GLFW_GAMEPAD_AXIS_RIGHT_Y,          3,      -0.25f,  -1.0f);
+        MAP_ANALOG(ImGuiKey_GamepadRStickDown,  GLFW_GAMEPAD_AXIS_RIGHT_Y,          3,      +0.25f,  +1.0f);
+#          undef MAP_BUTTON
+#          undef MAP_ANALOG
+    }
+    else // gEmulateGamepadWithKeyboard
+    {
+        // gEmulateGamepadWithKeyboard
+        float analogStep = 0.1f; // Bad stuff
+        if (io.Framerate>65.f) analogStep*= 60.f/io.Framerate;    // Never tested
+#       define MAP_BUTTON_PRESSED(NAV_NO, IMGUI_KEY_NO, MOD_BOOL)       do { io.AddKeyEvent(NAV_NO, (MOD_BOOL && ImGui::IsKeyPressed(IMGUI_KEY_NO)) ? 1.0f : 0.f); } while (0)
+#       define MAP_BUTTON_DOWN(NAV_NO, GLFW_KEY_NO, MOD_BOOL)           do { io.AddKeyEvent(NAV_NO, (MOD_BOOL && glfwGetKey(window,GLFW_KEY_NO)==GLFW_PRESS) ? 1.0f : 0.f); } while (0)
+#       define MAP_ANALOG(NAV_NO, GLFW_KEY_NO,MOD_BOOL,MOD_BOOL_HALF)   do { float v =((MOD_BOOL && glfwGetKey(window,GLFW_KEY_NO)==GLFW_PRESS) ? analogStep : 0.f)*(MOD_BOOL_HALF?0.5f:1.f); io.AddKeyAnalogEvent(NAV_NO, v > 0.10f, IMIMPL_SATURATE(v)); } while (0)
+//#     define MAP_ANALOG(NAV_NO, GLFW_KEY_NO,MOD_BOOL,MOD_BOOL_HALF) {float v =((MOD_BOOL && glfwGetKey(window,GLFW_KEY_NO)==GLFW_PRESS) ? analogStep : 0.f)*(MOD_BOOL_HALF?0.5f:1.f); if (v > 1.0f) v = 1.0f; if (io.NavInputs[NAV_NO] < v) io.NavInputs[NAV_NO] = v;}
+
+        const bool noMods = (!io.KeyCtrl && !io.KeyShift);
+
+        // These work.
+        MAP_BUTTON_PRESSED(ImGuiNavInput_Activate,  ImGuiKey_Space,      noMods);
+        MAP_BUTTON_PRESSED(ImGuiNavInput_Cancel,    ImGuiKey_Delete,     noMods);
+        MAP_BUTTON_PRESSED(ImGuiNavInput_Input,     ImGuiKey_Enter,      noMods);
+        MAP_BUTTON_DOWN(ImGuiNavInput_Menu,      GLFW_KEY_KP_0,    noMods);
+
+        MAP_BUTTON_DOWN(ImGuiNavInput_DpadLeft, GLFW_KEY_LEFT,   noMods);
+        MAP_BUTTON_DOWN(ImGuiNavInput_DpadRight,GLFW_KEY_RIGHT,  noMods);
+        MAP_BUTTON_DOWN(ImGuiNavInput_DpadUp,   GLFW_KEY_UP,     noMods);
+        MAP_BUTTON_DOWN(ImGuiNavInput_DpadDown, GLFW_KEY_DOWN,   noMods);
+
+        MAP_BUTTON_DOWN(ImGuiNavInput_FocusPrev, GLFW_KEY_KP_7,     noMods);
+        MAP_BUTTON_DOWN(ImGuiNavInput_FocusNext, GLFW_KEY_KP_9,     noMods);
+        MAP_BUTTON_DOWN(ImGuiNavInput_TweakSlow, GLFW_KEY_KP_7,     noMods);
+        MAP_BUTTON_DOWN(ImGuiNavInput_TweakFast, GLFW_KEY_KP_9,     noMods);
+
+        // These work (partially: io.KeyCtrl does nothing and there's the intimidating 'analogStep' above).
+        MAP_ANALOG(ImGuiNavInput_LStickLeft,    GLFW_KEY_KP_4,  noMods,  io.KeyCtrl);
+        MAP_ANALOG(ImGuiNavInput_LStickRight,   GLFW_KEY_KP_6,  noMods,  io.KeyCtrl);
+        MAP_ANALOG(ImGuiNavInput_LStickUp,      GLFW_KEY_KP_8,  noMods,  io.KeyCtrl);
+        MAP_ANALOG(ImGuiNavInput_LStickDown,    GLFW_KEY_KP_2,  noMods,  io.KeyCtrl);
+
+#       undef MAP_BUTTON_PRESSED
+#       undef MAP_BUTTON_DOWN
+#       undef MAP_ANALOG
+        io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+    }
+#   undef IMIMPL_SATURATE
+}
+
+
 
 static void ImImplMainLoopFrame(void* userPtr)	{
     ImImplMainLoopFrameStruct& mainLoopFrameStruct = *((ImImplMainLoopFrameStruct*) userPtr);
@@ -598,152 +712,9 @@ static void ImImplMainLoopFrame(void* userPtr)	{
     else {
         glfwPollEvents();
         //----------------------------------------------------------------------
-        // New: Gamepad navigation mapping [BETA]
-        // New: Added a Linux version (see GamePadMapping ctr)
-        // New: Added gEmulateGamepadWithKeyboard (intended mainly for __EMSCRIPTEN__ to replace NavEnableKeyboard), hard-coded to false
-        // Ideally we should make gGamePadMapping and gEmulateGamepadWithKeyboard global variables, so that users can change them.
-        // But I don't know what to do with this code snippet, because it's not easy to port it to other bindings.
-        // Moreover I don't own any gamepad (I borrowed one the day I made it work on Linux), so there's no
-        // chance I'll improve this code... :(
-        if (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad)  // TODO: Ideally we'd like to always fill io.NavInputs[] so that we can have a high-level Gamepad API
-        {
-            struct GamePadMapping {
-                int leftStickButtonsOrAxisIndices[4];
-                bool leftStickIsAnalog;             // If true, in the above field: [0]=[1]=hor_axis and [2]=[3]=ver_axis
-
-                int dpadButtonsOrAxisIndices[4];
-                bool dpadIsAnalog;                  // If true, in the above field: [0]=[1]=hor_axis and [2]=[3]=ver_axis
-
-                int mainButtons[4];                 // Cross/A, Circle/B, Square/X, Triangle/Y
-                int lrButtons[4];                   // L1,R1,LB,RB
-
-                // These control the analog sensitivity and direction:
-                float analogValuesX[4];             // 2 FOR LEFT AND TWO FOR RIGHT (default: {-0.3f,-0.9f,0.3f,0.9f})
-                float analogValuesY[4];             // 2 FOR UP AND TWO FOR DOWN    (handy if we must flip the vertical axis)
-
-                void flipAnalogAxisY() {
-                    float tmp=analogValuesY[0];analogValuesY[0]=analogValuesY[2];analogValuesY[2]=tmp;
-                    tmp=analogValuesY[1];analogValuesY[1]=analogValuesY[3];analogValuesY[3]=tmp;
-                }
-
-                GamePadMapping() {
-                    leftStickIsAnalog = true;
-                    leftStickButtonsOrAxisIndices[0]=leftStickButtonsOrAxisIndices[1]=0;
-                    leftStickButtonsOrAxisIndices[2]=leftStickButtonsOrAxisIndices[3]=1;
-
-                    lrButtons[0]=lrButtons[2]=4;lrButtons[1]=lrButtons[3]=5;
-
-                    analogValuesX[0]=-0.3f;analogValuesX[1]=-0.9f;
-                    analogValuesX[2]= 0.3f;analogValuesX[3]= 0.9f;
-                    for (int i=0;i<4;i++) analogValuesY[i]=analogValuesX[i];
-
- #                  ifndef __linux__
-                    // This should be the default setting used by Dear ImGui
-                    mainButtons[0]=0;mainButtons[1]=1;mainButtons[2]=2;mainButtons[3]=3;
-                    dpadIsAnalog = false;
-                    dpadButtonsOrAxisIndices[0]=13; dpadButtonsOrAxisIndices[1]=11;
-                    dpadButtonsOrAxisIndices[2]=1;  dpadButtonsOrAxisIndices[3]=12;
-#                   else //__linux__
-                    // This is what I got from a Sony joypad
-                    // (that looks like the one used for the default settings)
-                    // on Ubuntu Linux (without any sort of global config mapping applied)
-                    mainButtons[0]=1;mainButtons[1]=0;mainButtons[2]=2;mainButtons[3]=3;    // Buttons 0 and 1 are inverted
-                    dpadIsAnalog = true;                                                    // D-Pad is detected as analog (why?)
-                    dpadButtonsOrAxisIndices[0]=dpadButtonsOrAxisIndices[1]=6;
-                    dpadButtonsOrAxisIndices[2]=dpadButtonsOrAxisIndices[3]=7;
-                    flipAnalogAxisY();                                                      // Analog Up and Down are inverted
-#                   endif //__linux__
-                }
-            };
-            static GamePadMapping gGamePadMapping;
-            static bool gEmulateGamepadWithKeyboard =   // Intended mainly for __EMSCRIPTEN__ to replace NavEnableKeyboard, that does not work on browsers
-                    false;
-                    //true;
-
-            if (!gEmulateGamepadWithKeyboard)   {
-            // Update gamepad inputs
-#           define MAP_BUTTON(NAV_NO, BUTTON_NO)       { if (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS) io.NavInputs[NAV_NO] = 1.0f; }
-#           define MAP_ANALOG(NAV_NO, AXIS_NO, V0, V1) { float v = (axes_count > AXIS_NO) ? axes[AXIS_NO] : V0; v = (v - V0) / (V1 - V0); if (v > 1.0f) v = 1.0f; if (io.NavInputs[NAV_NO] < v) io.NavInputs[NAV_NO] = v; }
-            int axes_count = 0, buttons_count = 0;
-            const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axes_count);
-            const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttons_count);
-            GamePadMapping& GP = gGamePadMapping;
-            MAP_BUTTON(ImGuiNavInput_Activate,   GP.mainButtons[0]);     // Cross / A
-            MAP_BUTTON(ImGuiNavInput_Cancel,     GP.mainButtons[1]);     // Circle / B
-            MAP_BUTTON(ImGuiNavInput_Menu,       GP.mainButtons[2]);     // Square / X
-            MAP_BUTTON(ImGuiNavInput_Input,      GP.mainButtons[3]);     // Triangle / Y
-            if (GP.dpadIsAnalog) {
-                MAP_ANALOG(ImGuiNavInput_DpadLeft,   GP.dpadButtonsOrAxisIndices[0], GP.analogValuesX[0],  GP.analogValuesX[1]);    // D-Pad Left
-                MAP_ANALOG(ImGuiNavInput_DpadRight,  GP.dpadButtonsOrAxisIndices[1], GP.analogValuesX[2],  GP.analogValuesX[3]);    // D-Pad Right
-                MAP_ANALOG(ImGuiNavInput_DpadUp,     GP.dpadButtonsOrAxisIndices[2], GP.analogValuesY[0],  GP.analogValuesY[1]);    // D-Pad Up
-                MAP_ANALOG(ImGuiNavInput_DpadDown,   GP.dpadButtonsOrAxisIndices[3], GP.analogValuesY[2],  GP.analogValuesY[3]);    // D-Pad Down
-            }
-            else    {
-                MAP_BUTTON(ImGuiNavInput_DpadLeft,   GP.dpadButtonsOrAxisIndices[0]);    // D-Pad Left
-                MAP_BUTTON(ImGuiNavInput_DpadRight,  GP.dpadButtonsOrAxisIndices[1]);    // D-Pad Right
-                MAP_BUTTON(ImGuiNavInput_DpadUp,     GP.dpadButtonsOrAxisIndices[2]);    // D-Pad Up
-                MAP_BUTTON(ImGuiNavInput_DpadDown,   GP.dpadButtonsOrAxisIndices[3]);    // D-Pad Down
-            }
-            MAP_BUTTON(ImGuiNavInput_FocusPrev,  GP.lrButtons[0]);     // L1 / LB
-            MAP_BUTTON(ImGuiNavInput_FocusNext,  GP.lrButtons[1]);     // R1 / RB
-            MAP_BUTTON(ImGuiNavInput_TweakSlow,  GP.lrButtons[2]);     // L1 / LB
-            MAP_BUTTON(ImGuiNavInput_TweakFast,  GP.lrButtons[3]);     // R1 / RB
-            if (GP.leftStickIsAnalog)  {
-                MAP_ANALOG(ImGuiNavInput_LStickLeft, GP.leftStickButtonsOrAxisIndices[0],  GP.analogValuesX[0],  GP.analogValuesX[1]);
-                MAP_ANALOG(ImGuiNavInput_LStickRight,GP.leftStickButtonsOrAxisIndices[1],  GP.analogValuesX[2],  GP.analogValuesX[3]);
-                MAP_ANALOG(ImGuiNavInput_LStickUp,   GP.leftStickButtonsOrAxisIndices[2],  GP.analogValuesY[0],  GP.analogValuesY[1]);
-                MAP_ANALOG(ImGuiNavInput_LStickDown, GP.leftStickButtonsOrAxisIndices[3],  GP.analogValuesY[2],  GP.analogValuesY[3]);
-            }
-            else    {
-                MAP_BUTTON(ImGuiNavInput_LStickLeft,   GP.leftStickButtonsOrAxisIndices[0]);
-                MAP_BUTTON(ImGuiNavInput_LStickRight,  GP.leftStickButtonsOrAxisIndices[1]);
-                MAP_BUTTON(ImGuiNavInput_LStickUp,     GP.leftStickButtonsOrAxisIndices[2]);
-                MAP_BUTTON(ImGuiNavInput_LStickDown,   GP.leftStickButtonsOrAxisIndices[3]);
-            }
-#           undef MAP_BUTTON
-#           undef MAP_ANALOG
-            if (axes_count > 0 && buttons_count > 0) io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-            else io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-            }
-            else {
-                // gEmulateGamepadWithKeyboard
-                float analogStep = 0.1f; // Bad stuff
-                if (io.Framerate>65.f) analogStep*= 60.f/io.Framerate;    // Never tested
-#               define MAP_BUTTON_PRESSED(NAV_NO, IMGUI_KEY_NO, MOD_BOOL)  {io.NavInputs[NAV_NO] = (MOD_BOOL && ImGui::IsKeyPressed(IMGUI_KEY_NO)) ? 1.0f : 0.f;}
-#               define MAP_BUTTON_DOWN(NAV_NO, GLFW_KEY_NO, MOD_BOOL)  { io.NavInputs[NAV_NO] = (MOD_BOOL && glfwGetKey(window,GLFW_KEY_NO)==GLFW_PRESS) ? 1.0f : 0.f;}
-#               define MAP_ANALOG(NAV_NO, GLFW_KEY_NO,MOD_BOOL,MOD_BOOL_HALF) {float v =((MOD_BOOL && glfwGetKey(window,GLFW_KEY_NO)==GLFW_PRESS) ? analogStep : 0.f)*(MOD_BOOL_HALF?0.5f:1.f); if (v > 1.0f) v = 1.0f; if (io.NavInputs[NAV_NO] < v) io.NavInputs[NAV_NO] = v;}
-
-                const bool noMods = (!io.KeyCtrl && !io.KeyShift);
-
-                // These work.
-                MAP_BUTTON_PRESSED(ImGuiNavInput_Activate,  ImGuiKey_Space,      noMods);
-                MAP_BUTTON_PRESSED(ImGuiNavInput_Cancel,    ImGuiKey_Delete,     noMods);
-                MAP_BUTTON_PRESSED(ImGuiNavInput_Input,     ImGuiKey_Enter,      noMods);
-                MAP_BUTTON_DOWN(ImGuiNavInput_Menu,      GLFW_KEY_KP_0,    noMods);
-
-                MAP_BUTTON_DOWN(ImGuiNavInput_DpadLeft, GLFW_KEY_LEFT,   noMods);
-                MAP_BUTTON_DOWN(ImGuiNavInput_DpadRight,GLFW_KEY_RIGHT,  noMods);
-                MAP_BUTTON_DOWN(ImGuiNavInput_DpadUp,   GLFW_KEY_UP,     noMods);
-                MAP_BUTTON_DOWN(ImGuiNavInput_DpadDown, GLFW_KEY_DOWN,   noMods);
-
-                MAP_BUTTON_DOWN(ImGuiNavInput_FocusPrev, GLFW_KEY_KP_7,     noMods);
-                MAP_BUTTON_DOWN(ImGuiNavInput_FocusNext, GLFW_KEY_KP_9,     noMods);
-                MAP_BUTTON_DOWN(ImGuiNavInput_TweakSlow, GLFW_KEY_KP_7,     noMods);
-                MAP_BUTTON_DOWN(ImGuiNavInput_TweakFast, GLFW_KEY_KP_9,     noMods);
-
-                // These work (partially: io.KeyCtrl does nothing and there's the intimidating 'analogStep' above).
-                MAP_ANALOG(ImGuiNavInput_LStickLeft,    GLFW_KEY_KP_4,  noMods,  io.KeyCtrl);
-                MAP_ANALOG(ImGuiNavInput_LStickRight,   GLFW_KEY_KP_6,  noMods,  io.KeyCtrl);
-                MAP_ANALOG(ImGuiNavInput_LStickUp,      GLFW_KEY_KP_8,  noMods,  io.KeyCtrl);
-                MAP_ANALOG(ImGuiNavInput_LStickDown,    GLFW_KEY_KP_2,  noMods,  io.KeyCtrl);
-
-#               undef MAP_BUTTON_PRESSED
-#               undef MAP_BUTTON_DOWN
-#               undef MAP_ANALOG
-                io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-            }
+        // Update game controllers (if enabled and available)
+        glfw_Update_gamepads();
         //------------------------------------------------------------------------
-        }
     }
 
     // Setup timestep
@@ -755,11 +726,10 @@ static void ImImplMainLoopFrame(void* userPtr)	{
     // Start the frame
     {
         io.DeltaTime = deltaTime;
-        for (size_t i = 0; i < 5; i++) {
+        /*for (size_t i = 0; i < 5; i++) {
             io.MouseDown[i]= g_MousePressed[i] || glfwGetMouseButton(window, i); // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
             g_MousePressed[i] = false;
-        }
-        glfw_window_update_ImGuiKeyModFlags();
+        }*/
         if (!gImGuiPaused) {
             if (io.WantSetMousePos)  {
                 // Set mouse position if requested by io.WantSetMousePos flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
@@ -832,7 +802,7 @@ int ImImpl_Main(const ImImpl_InitParams* pOptionalInitParams,int argc, char** ar
     InitImGui(pOptionalInitParams);
     ImGuiIO& io = ImGui::GetIO();
 
-ImImplMainLoopFrameStruct mainLoopFrameStruct;
+    ImImplMainLoopFrameStruct mainLoopFrameStruct;
     // New: create cursors-------------------------------------------
 #ifdef GLFW_HAS_MOUSE_CURSOR_SUPPORT
         IM_ASSERT(sizeof(glfwCursorIds)/sizeof(glfwCursorIds[0])==ImGuiMouseCursor_COUNT+1);
@@ -846,7 +816,7 @@ ImImplMainLoopFrameStruct mainLoopFrameStruct;
             printf("Sorry, but your glfw version has a broken standard cursor support [glfwCreateStandardCursor(...) always returns NULL].\nSkipping cursors.\n");
             fflush(stdout);
         }
-#else //GLFW_HAS_MOUSE_CURSOR_SUPPORT        
+#else //GLFW_HAS_MOUSE_CURSOR_SUPPORT
 #   ifndef IMGUI_GLFW_NO_NATIVE_CURSORS
 #       ifdef IMGUI_USE_WIN32_CURSORS
         IM_ASSERT(sizeof(win32CursorIds)/sizeof(win32CursorIds[0])==ImGuiMouseCursor_COUNT+1);

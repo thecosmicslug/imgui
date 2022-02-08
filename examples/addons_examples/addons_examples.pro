@@ -115,7 +115,8 @@ SOURCES+=  $$IMGUI_BASE_PATH"/imgui.cpp" \
            #$$IMGUI_BASE_PATH"/imgui_widgets.cpp"
 
 OTHER_FILES+= $$IMGUI_BASE_PATH"/imgui_widgets.cpp" \ # This (new) file is automatically included in imgui_user.inl. Please don't compile it.
-              $$IMGUI_BASE_PATH"/misc/freetype/*.*"
+              $$IMGUI_BASE_PATH"/misc/freetype/*.*" \
+              $$IMGUI_BASE_PATH"/backends/*.*"
 
 use_main6 {
 SOURCES+=main6.cpp

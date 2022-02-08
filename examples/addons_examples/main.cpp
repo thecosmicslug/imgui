@@ -707,97 +707,193 @@ void DrawGL()	// Mandatory
         if (ImGui::TreeNodeEx("imguivariouscontrols",collapsingHeaderFlags)) {
 #       ifndef NO_IMGUIVARIOUSCONTROLS
 
-        // Check Buttons
-        ImGui::Text("Check Buttons:");ImGui::SameLine();
-        static bool checkButtonState1=false;
-        if (ImGui::CheckButton("CheckButton",&checkButtonState1)) {/*checkButtonState1 changed*/}
-        ImGui::SameLine();
-        static bool checkButtonState2=false;
-        if (ImGui::SmallCheckButton("SmallCheckButton",&checkButtonState2)) {/*checkButtonState2 changed*/}
+        ImGui::Spacing();ImGui::Separator();ImGui::Text("Some old stuff:");ImGui::Separator();
 
-        // ProgressBar Test:
-        ImGui::TestProgressBar();
-        // ColorChooser Test:
-        static ImVec4 chosenColor(1,1,1,1);
-        static bool openColorChooser = false;
-        ImGui::AlignTextToFramePadding();ImGui::Text("Please choose a color:");ImGui::SameLine();
-        openColorChooser|=ImGui::ColorButton("color button",chosenColor);
-        //if (openColorChooser) chosenColor.z=0.f;
-        if (ImGui::ColorChooser(&openColorChooser,&chosenColor)) {
-            // choice OK here
-        }
-        // ColorComboTest:
-        static ImVec4 chosenColor2(1,1,1,1);
-        if (ImGui::ColorCombo("MyColorCombo",&chosenColor2))
-        {
-            // choice OK here
-        }
-        // PopupMenuSimple Test:
-        // Recent Files-like menu
-        static const char* recentFileList[] = {"filename01","filename02","filename03","filename04","filename05","filename06","filename07","filename08","filename09","filename10"};
-        static ImGui::PopupMenuSimpleParams pmsParams;
-        /*const bool popupMenuButtonClicked = */ImGui::Button("Right-click me##PopupMenuSimpleTest");
-        pmsParams.open|= ImGui::GetIO().MouseClicked[1] && ImGui::IsItemHovered(); // RIGHT CLICK on the last widget
-        //popupMenuButtonClicked;    // Or we can just click the button
-        const int selectedEntry = ImGui::PopupMenuSimple(pmsParams,recentFileList,(int) sizeof(recentFileList)/sizeof(recentFileList[0]),5,true,"RECENT FILES");
-        static int lastSelectedEntry = -1;
-        if (selectedEntry>=0) {
-            // Do something: clicked recentFileList[selectedEntry].
-            // Good in most cases, but here we want to persist the last choice because this branch happens only one frame:
-            lastSelectedEntry = selectedEntry;
-        }
-        if (lastSelectedEntry>=0) {ImGui::SameLine();ImGui::Text("Last selected: %s\n",recentFileList[lastSelectedEntry]);}
-        // Fast copy/cut/paste menus
-        static char buf[512]="Some sample text";
-        ImGui::InputTextMultiline("Right click to have\na (non-functional)\ncopy/cut/paste menu\nin one line of code##TestCopyCutPaste",buf,512);
-        const int cutCopyOrPasteSelected = ImGui::PopupMenuSimpleCopyCutPasteOnLastItem();
-        if (cutCopyOrPasteSelected>=0)  {
-            // Here we have 0 = cut, 1 = copy, 2 = paste
-            // However ImGui::PopupMenuSimpleCopyCutPasteOnLastItem() can't perform these operations for you
-            // and it's not trivial at all... at least I've got no idea on how to do it!
-            // Moreover, the selected text seems to lose focus when the menu is selected...
+        ImGui::Spacing();
+        if (ImGui::TreeNodeEx("Some (old) ProgressBar Stuff/Experiments:"))     {
+            // ProgressBar Test:
+            ImGui::TestProgressBar();
+            ImGui::TreePop();
         }
 
-        // Single column popup menu with icon support. It disappears when the mouse goes away. Never tested.
-        // User is supposed to create a static instance of it, add entries once, and then call "render()".
-        static ImGui::PopupMenu pm;
-        if (pm.isEmpty())   {
-            pm.addEntryTitle("Single Menu With Images");
-            char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
-            for (int i=0;i<9;i++) {
-                strcpy(tmp,"Image Menu Entry ");
-                sprintf(&tmp[strlen(tmp)],"%d",i+1);
-                uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
-                uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
-
-                pm.addEntry(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1);
+        ImGui::Spacing();
+        if (ImGui::TreeNodeEx("Some (old) Color Stuff/Experiments:"))     {
+            // ColorChooser Test:
+            static ImVec4 chosenColor(1,1,1,1);
+            static bool openColorChooser = false;
+            ImGui::AlignTextToFramePadding();ImGui::Text("Please choose a color:");ImGui::SameLine();
+            openColorChooser|=ImGui::ColorButton("color button",chosenColor);
+            //if (openColorChooser) chosenColor.z=0.f;
+            if (ImGui::ColorChooser(&openColorChooser,&chosenColor)) {
+                // choice OK here
             }
-
+            // ColorComboTest:
+            static ImVec4 chosenColor2(1,1,1,1);
+            if (ImGui::ColorCombo("MyColorCombo",&chosenColor2))
+            {
+                // choice OK here
+            }
+            ImGui::TreePop();
         }
-        static bool trigger = false;
-        trigger|=ImGui::Button("Press me for a menu with images##PopupMenuWithImagesTest");
-        /*const int selectedImageMenuEntry =*/ pm.render(trigger);   // -1 = none
 
+        ImGui::Spacing();
+        if (ImGui::TreeNodeEx("Some (old) Menu Stuff/Experiments:"))     {
+            // PopupMenuSimple Test:
+            // Recent Files-like menu
+            static const char* recentFileList[] = {"filename01","filename02","filename03","filename04","filename05","filename06","filename07","filename08","filename09","filename10"};
+            static ImGui::PopupMenuSimpleParams pmsParams;
+            /*const bool popupMenuButtonClicked = */ImGui::Button("Right-click me##PopupMenuSimpleTest");
+            pmsParams.open|= ImGui::GetIO().MouseClicked[1] && ImGui::IsItemHovered(); // RIGHT CLICK on the last widget
+            //popupMenuButtonClicked;    // Or we can just click the button
+            const int selectedEntry = ImGui::PopupMenuSimple(pmsParams,recentFileList,(int) sizeof(recentFileList)/sizeof(recentFileList[0]),5,true,"RECENT FILES");
+            static int lastSelectedEntry = -1;
+            if (selectedEntry>=0) {
+                // Do something: clicked recentFileList[selectedEntry].
+                // Good in most cases, but here we want to persist the last choice because this branch happens only one frame:
+                lastSelectedEntry = selectedEntry;
+            }
+            if (lastSelectedEntry>=0) {ImGui::SameLine();ImGui::Text("Last selected: %s\n",recentFileList[lastSelectedEntry]);}
+
+
+            // Single column popup menu with icon support. It disappears when the mouse goes away. Never tested.
+            // User is supposed to create a static instance of it, add entries once, and then call "render()".
+            static ImGui::PopupMenu pm;
+            if (pm.isEmpty())   {
+                pm.addEntryTitle("Single Menu With Images");
+                char tmp[1024];ImVec2 uv0(0,0),uv1(0,0);
+                for (int i=0;i<9;i++) {
+                    strcpy(tmp,"Image Menu Entry ");
+                    sprintf(&tmp[strlen(tmp)],"%d",i+1);
+                    uv0 = ImVec2((float)(i%3)/3.f,(float)(i/3)/3.f);
+                    uv1 = ImVec2(uv0.x+1.f/3.f,uv0.y+1.f/3.f);
+
+                    pm.addEntry(tmp,reinterpret_cast<void*>(myImageTextureId2),uv0,uv1);
+                }
+
+            }
+            static bool trigger = false;
+            trigger|=ImGui::Button("Press me for a menu with images##PopupMenuWithImagesTest");
+            /*const int selectedImageMenuEntry =*/ pm.render(trigger);   // -1 = none
+            ImGui::TreePop();
+        }
 
         // Based on the code from: https://github.com/Roflraging
         ImGui::Spacing();
-        ImGui::Text("InputTextMultiline with horizontal scrolling:");
-        static char buffer[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
-        const float height = 60;
-        ImGui::PushID(buffer);
-        ImGui::InputTextMultilineWithHorizontalScrolling("ITMWHS", buffer, 1024, height);   // Note that now the label is not displayed ATM
-        ImGui::PopID();
+        if (ImGui::TreeNodeEx("Some (old) InputText Stuff/Experiments:"))     {
+            // Fast copy/cut/paste menus
+            static char buf[512]="Some sample text";
+            ImGui::InputTextMultiline("Right click to have\na (non-functional)\ncopy/cut/paste menu\nin one line of code##TestCopyCutPaste",buf,512);
+            const int cutCopyOrPasteSelected = ImGui::PopupMenuSimpleCopyCutPasteOnLastItem();
+            if (cutCopyOrPasteSelected>=0)  {
+                // Here we have 0 = cut, 1 = copy, 2 = paste
+                // However ImGui::PopupMenuSimpleCopyCutPasteOnLastItem() can't perform these operations for you
+                // and it's not trivial at all... at least I've got no idea on how to do it!
+                // Moreover, the selected text seems to lose focus when the menu is selected...
+            }
 
-        ImGui::Spacing();
-        ImGui::Text("Same as above with a context-menu that should work (more or less):");
-        static char buffer2[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
-        ImGui::PushID(buffer2);
-        static bool popup_open = false;static int threeStaticInts[3]={0,0,0};
-        ImGui::InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu("ITMWHS2", buffer2, 1024, height,popup_open,threeStaticInts);
-        ImGui::PopID();
+            ImGui::Text("InputTextMultiline with horizontal scrolling:");
+            static char buffer[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
+            const float height = 60;
+            ImGui::PushID(buffer);
+            ImGui::InputTextMultilineWithHorizontalScrolling("ITMWHS", buffer, 1024, height);   // Note that now the label is not displayed ATM
+            ImGui::PopID();
 
-        ImGui::Spacing();ImGui::Separator();ImGui::Text("AutoCompletion Stuff (UP/DOWN/TAB keys):");ImGui::Separator();
-        {
+            ImGui::Spacing();
+            ImGui::Text("Same as above with a context-menu that should work (more or less):");
+            static char buffer2[1024] = "Code posted by Roflraging to the ImGui Issue Section (https://github.com/ocornut/imgui/issues/383).";
+            ImGui::PushID(buffer2);
+            static bool popup_open = false;static int threeStaticInts[3]={0,0,0};
+            ImGui::InputTextMultilineWithHorizontalScrollingAndCopyCutPasteMenu("ITMWHS2", buffer2, 1024, height,popup_open,threeStaticInts);
+            ImGui::PopID();
+            ImGui::TreePop();
+        }
+
+        ImGui::Spacing();ImGui::Separator();ImGui::Text("Extended Buttons And Checkboxes:");ImGui::Separator();
+        if (ImGui::TreeNode("Extended Buttons And Checkboxes##VCEB"))  {
+            // Image Button
+            ImGui::Text("(Animated) Image Buttons/Gifs:");
+            ImGui::ImageButtonWithText(reinterpret_cast<ImTextureID>(myImageTextureId2),"MyImageButtonWithText",ImVec2(16,16),ImVec2(0,0),ImVec2(0.33334f,0.33334f));
+
+            // Animated Image Buttons/Animated Gifs
+#           ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+            // One instance per image, but it can feed multiple widgets
+            static ImGui::AnimatedImage gif(myImageTextureId2,64,64,9,3,3,30,true);
+            //static ImGui::AnimatedImage gif("extra/awesome.gif",true);
+            ImGui::SameLine();
+            gif.render();
+            ImGui::SameLine();
+            gif.renderAsButton("myButton123",ImVec2(-.5f,-.5f));    // Negative size multiplies the 'native' gif size
+#        endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
+
+            // ColoredButtonV1: code posted by @ocornut here:
+            // https://github.com/ocornut/imgui/issues/4722
+            ImGui::Spacing();
+            ImGui::Text("ColorButtonV1 (by @ocornut: hope we can use it)");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Code posted by @ocornut here:\nhttps://github.com/ocornut/imgui/issues/4722");
+            // [Button rounding depends on the FrameRounding Style property (but can be overridden with the last argument)]
+            const float cbv1width = ImGui::GetContentRegionAvail().x*0.45f;
+            ImGui::ColoredButtonV1("Hello##ColoredButtonV1Hello", ImVec2(cbv1width, 0.0f), IM_COL32(255, 255, 255, 255), IM_COL32(200, 60, 60, 255), IM_COL32(180, 40, 90, 255));
+            ImGui::SameLine();
+            ImGui::ColoredButtonV1("You##ColoredButtonV1You", ImVec2(cbv1width, 0.0f), IM_COL32(255, 255, 255, 255), IM_COL32(50, 220, 60, 255), IM_COL32(69, 150, 70, 255),10.0f); // FrameRounding in [0.0,12.0]
+
+            // Check Buttons
+            ImGui::Spacing();
+            ImGui::AlignTextToFramePadding();ImGui::Text("Check Buttons:");
+            static bool checkButtonState1=false;
+            if (ImGui::CheckButton("CheckButton",&checkButtonState1)) {/*checkButtonState1 changed*/}
+            ImGui::SameLine();
+            static bool checkButtonState2=false;
+            if (ImGui::SmallCheckButton("SmallCheckButton",&checkButtonState2)) {/*checkButtonState2 changed*/}
+
+            // CheckBox Styled
+            ImGui::Spacing();
+            ImGui::AlignTextToFramePadding();ImGui::Text("CheckBox Styled:");
+            static bool checkStyled[2] = {false,true};
+            // Default look and size
+            ImGui::CheckboxStyled("Checkbox Styled 1 (default style)",&checkStyled[0]);
+            // Custom look and size
+            static const ImU32 optionalEightColors[8] = {
+                IM_COL32(220,220,220,255),IM_COL32(255,255,255,255),    // on_circle (normal and hovered)
+                IM_COL32(80,80,80,255),IM_COL32(100,100,100,255),       // off_circle (normal and hovered)
+                IM_COL32(60,120,60,255),IM_COL32(80,155,80,255),        // on_bg (normal and hovered)
+                IM_COL32(60,60,60,255),IM_COL32(80,80,80,255)           // off_bg (normal and hovered)
+            };
+            const ImVec2 checkBoxSizeScale(1.5f,2.f);   // (checkBoxSizeScale.y max is 2.f)
+            const float checkBoxRounding = 6.f;         // -1 defaults to style.WindowRounding. Note that is scales with the font height)
+            ImGui::CheckboxStyled("Checkbox Styled 2 (custom style)",&checkStyled[1],optionalEightColors,checkBoxSizeScale,checkBoxRounding);
+
+            // CheckboxFlags Overload
+            ImGui::Spacing();
+            ImGui::AlignTextToFramePadding();ImGui::Text("CheckBoxFlags Overload:");
+            static int numFlags=16;
+            static int numRows=2;
+            static int numColumns=3;
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.2f);
+            ImGui::SliderInt("Flags##CBF_Flags",&numFlags,1,20);ImGui::SameLine();
+            ImGui::SliderInt("Rows##CBF_Rows",&numRows,1,4);ImGui::SameLine();
+            ImGui::SliderInt("Columns##CBF_Columns",&numColumns,1,5);
+            ImGui::PopItemWidth();
+
+            static unsigned int cbFlags = (unsigned int)  128+32+8+1;
+            static const unsigned int cbAnnotationFlags = 0;//132;   // Optional (default is zero = no annotations)
+            int flagIndexHovered = -1;  // Optional
+            ImGui::CheckboxFlags("Flags###CBF_Overload",&cbFlags,numFlags,numRows,numColumns,cbAnnotationFlags,&flagIndexHovered);
+            if (flagIndexHovered!=-1) {
+                // Test: Manual positional tooltip
+                ImVec2 m = ImGui::GetIO().MousePos;
+                ImGui::SetNextWindowPos(ImVec2(m.x, m.y+ImGui::GetTextLineHeightWithSpacing()));
+                ImGui::Begin("CBF_Overload_Tooltip", NULL, ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
+                ImGui::Text("flag %d. Hold shift\nwhile clicking to toggle it",flagIndexHovered);
+                ImGui::End();
+            }
+            // BUG: This is completely wrong (both x and y position):
+            //ImGui::SameLine(0,0);ImGui::Text("%s","Test");    // (I don't know how to get this fixed)
+
+            ImGui::TreePop();
+        }
+
+        ImGui::Spacing();ImGui::Separator();ImGui::Text("AutoCompletion Stuff");ImGui::Separator();
+        if (ImGui::TreeNodeEx("AutoCompletion Stuff (UP/DOWN/TAB keys):"))  {
             // Bad implementation: users think they can click on the autocompletion-menu, instead of using TAB+ARROWS
 
             static const int bufferSize = 84;   // Mandatory [ImGui::InputText(...) needs it]
@@ -916,8 +1012,8 @@ void DrawGL()	// Mandatory
 
                 //ImGui::SetNextItemWidth(150.f);
                 if (ImGui::InputComboWithAutoCompletion("Colors##AutoCompleteIT",&current_item,bufferSize,&bufData,
-                    TMP::ItemGetter,TMP::ItemInserter,TMP::ItemDeleter,TMP::ItemRenamer,   // TMP::ItemDeleter and TMP::ItemRenemer can be NULL
-                    autocompletionEntries.size(),(void*)&autocompletionEntries))    {
+                                                        TMP::ItemGetter,TMP::ItemInserter,TMP::ItemDeleter,TMP::ItemRenamer,   // TMP::ItemDeleter and TMP::ItemRenemer can be NULL
+                                                        autocompletionEntries.size(),(void*)&autocompletionEntries))    {
                     // something has changes (the Combo selected item, and/or an insert/delete operation
                 }
                 // For this particular widget ImGui::IsItemHovered() does not always work as expected. Workaround:
@@ -925,20 +1021,9 @@ void DrawGL()	// Mandatory
             }
             ImGui::PopItemWidth();
 
+            ImGui::TreePop();
         }
 
-        ImGui::Spacing();ImGui::Separator();ImGui::Text("Buttons With Images:");ImGui::Separator();
-        ImGui::ImageButtonWithText(reinterpret_cast<ImTextureID>(myImageTextureId2),"MyImageButtonWithText",ImVec2(16,16),ImVec2(0,0),ImVec2(0.33334f,0.33334f));
-
-#       ifndef NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
-        // One instance per image, but it can feed multiple widgets
-        static ImGui::AnimatedImage gif(myImageTextureId2,64,64,9,3,3,30,true);
-        //static ImGui::AnimatedImage gif("extra/awesome.gif",true);
-        ImGui::SameLine();
-        gif.render();
-        ImGui::SameLine();
-        gif.renderAsButton("myButton123",ImVec2(-.5f,-.5f));    // Negative size multiplies the 'native' gif size
-#       endif //NO_IMGUIVARIOUSCONTROLS_ANIMATEDIMAGE
 
         ImGui::Spacing();ImGui::Separator();ImGui::Text("Image with zoom (CTRL+MW) and pan (RMB drag):");ImGui::Separator();
         static float zoom = 1.f;static ImVec2 pan(.5f,.5f);
@@ -1249,79 +1334,33 @@ void DrawGL()	// Mandatory
         ImGui::Text("Password Drawer Widget:");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Basically it's a widget you can\ndraw a password in, by mouse dragging.");
         ImGui::Separator();
+        if (ImGui::TreeNode("Password Drawer##Password Drawer Widget"))    {
+            static char password[37] = "";
+            static int gridComboSelection = 1;  // We start with option 1 -> 3x3 grid
+            static int passwordSize = (2+gridComboSelection)*(2+gridComboSelection)+1;  // +1 -> trailing '\0'
+            ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.1f);
+            static const char* gridComboItemNames[5]= {"2","3","4","5","6"};
+            if (ImGui::Combo("Grid Size##MobileLockGridSize",&gridComboSelection,gridComboItemNames,5))   {
+                passwordSize = 2+gridComboSelection;
+                passwordSize*=passwordSize;
+                passwordSize+=1;  // +1 -> trailing '\0'
+                password[0]='\0';   // reset password
+            }
+            ImGui::PopItemWidth();
+            static char passwordDisplayedBelow[37] = "";
+            if (ImGui::PasswordDrawer(password,passwordSize))   {
+                strcpy(passwordDisplayedBelow,password);
+                password[0]='\0';   // reset password
+            }
+            //ImGui::Text("Live Password: %s",password);// DBG
+            if (strlen(passwordDisplayedBelow)>0) ImGui::Text("Password: %s",passwordDisplayedBelow);
 
-        static char password[37] = "";
-        static int gridComboSelection = 1;  // We start with option 1 -> 3x3 grid
-        static int passwordSize = (2+gridComboSelection)*(2+gridComboSelection)+1;  // +1 -> trailing '\0'
-        ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.1f);
-        static const char* gridComboItemNames[5]= {"2","3","4","5","6"};
-        if (ImGui::Combo("Grid Size##MobileLockGridSize",&gridComboSelection,gridComboItemNames,5))   {
-            passwordSize = 2+gridComboSelection;
-            passwordSize*=passwordSize;
-            passwordSize+=1;  // +1 -> trailing '\0'
-            password[0]='\0';   // reset password
-        }
-        ImGui::PopItemWidth();
-        static char passwordDisplayedBelow[37] = "";
-        if (ImGui::PasswordDrawer(password,passwordSize))   {
-            strcpy(passwordDisplayedBelow,password);
-            password[0]='\0';   // reset password
-        }
-        //ImGui::Text("Live Password: %s",password);// DBG
-        if (strlen(passwordDisplayedBelow)>0) ImGui::Text("Password: %s",passwordDisplayedBelow);
-
-        // A commented out example of a read-only version [note that must be: passwordSize = gridSize*gridSize+1, even if password it's shorter]
-        //ImGui::Spacing();ImGui::Separator();if (ImGui::PasswordDrawer((char*)"15984",10,ImGuiPasswordDrawerFlags_ReadOnly,250)) {printf("Whole read-only widget clicked\n");fflush(stdout);}
-
-        // CheckboxFlags
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Text("CheckboxFlags() Overload [Experimental]:");
-        ImGui::Separator();
-
-        static int numFlags=16;
-        static int numRows=2;
-        static int numColumns=3;
-        ImGui::PushItemWidth(ImGui::GetWindowWidth()*0.2f);
-        ImGui::SliderInt("Flags##CBF_Flags",&numFlags,1,20);ImGui::SameLine();
-        ImGui::SliderInt("Rows##CBF_Rows",&numRows,1,4);ImGui::SameLine();
-        ImGui::SliderInt("Columns##CBF_Columns",&numColumns,1,5);
-        ImGui::PopItemWidth();
-
-        static unsigned int cbFlags = (unsigned int)  128+32+8+1;
-        static const unsigned int cbAnnotationFlags = 0;//132;   // Optional (default is zero = no annotations)
-        int flagIndexHovered = -1;  // Optional
-        ImGui::CheckboxFlags("Flags###CBF_Overload",&cbFlags,numFlags,numRows,numColumns,cbAnnotationFlags,&flagIndexHovered);
-        if (flagIndexHovered!=-1) {
-            // Test: Manual positional tooltip
-            ImVec2 m = ImGui::GetIO().MousePos;
-            ImGui::SetNextWindowPos(ImVec2(m.x, m.y+ImGui::GetTextLineHeightWithSpacing()));
-            ImGui::Begin("CBF_Overload_Tooltip", NULL, ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar);
-            ImGui::Text("flag %d. Hold shift\nwhile clicking to toggle it",flagIndexHovered);
-            ImGui::End();
+            // A commented out example of a read-only version [note that must be: passwordSize = gridSize*gridSize+1, even if password it's shorter]
+            //ImGui::Spacing();ImGui::Separator();if (ImGui::PasswordDrawer((char*)"15984",10,ImGuiPasswordDrawerFlags_ReadOnly,250)) {printf("Whole read-only widget clicked\n");fflush(stdout);}
+            ImGui::TreePop();
         }
 
-        // BUG: This is completely wrong (both x and y position):
-        //ImGui::SameLine(0,0);ImGui::Text("%s","Test");    // (I don't know how to get this fixed)
 
-        // CheckboxStyled
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Text("CheckboxStyled(...)");
-        ImGui::Separator();
-        static bool checkStyled[2] = {false,true};
-        // Default look and size
-        ImGui::CheckboxStyled("Checkbox Styled 1 (default style)",&checkStyled[0]);
-        // Custom look and size
-        static const ImU32 optionalEightColors[8] = {
-            IM_COL32(220,220,220,255),IM_COL32(255,255,255,255),    // on_circle (normal and hovered)
-            IM_COL32(80,80,80,255),IM_COL32(100,100,100,255),       // off_circle (normal and hovered)
-            IM_COL32(60,120,60,255),IM_COL32(80,155,80,255),        // on_bg (normal and hovered)
-            IM_COL32(60,60,60,255),IM_COL32(80,80,80,255)           // off_bg (normal and hovered)
-        };
-        const ImVec2 checkBoxSizeScale(1.5f,2.f);   // (checkBoxSizeScale.y max is 2.f)
-        const float checkBoxRounding = 6.f;         // -1 defaults to style.WindowRounding. Note that is scales with the font height)
-        ImGui::CheckboxStyled("Checkbox Styled 2 (custom style)",&checkStyled[1],optionalEightColors,checkBoxSizeScale,checkBoxRounding);
 
         // Knob
         ImGui::Spacing();
@@ -1410,19 +1449,49 @@ void DrawGL()	// Mandatory
             ImGui::Text("Last selected pie menu item: %s",strlen(pieSelected)==0?"NONE":pieSelected);
         }
 
-
-        // ColoredButtonV1: code posted by @ocornut here:
-        // https://github.com/ocornut/imgui/issues/4722
         ImGui::Spacing();
         ImGui::Separator();
-        ImGui::Text("ColorButtonV1 (by @ocornut: hope we can use it)");
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Code posted by @ocornut here:\nhttps://github.com/ocornut/imgui/issues/4722");
-        ImGui::Separator();
-        // [Button rounding depends on the FrameRounding Style property (but can be overridden with the last argument)]
-        const float cbv1width = ImGui::GetContentRegionAvail().x*0.45f;
-        ImGui::ColoredButtonV1("Hello##ColoredButtonV1Hello", ImVec2(cbv1width, 0.0f), IM_COL32(255, 255, 255, 255), IM_COL32(200, 60, 60, 255), IM_COL32(180, 40, 90, 255));
-        ImGui::SameLine();
-        ImGui::ColoredButtonV1("You##ColoredButtonV1You", ImVec2(cbv1width, 0.0f), IM_COL32(255, 255, 255, 255), IM_COL32(50, 220, 60, 255), IM_COL32(69, 150, 70, 255),10.0f); // FrameRounding in [0.0,12.0]
+        ImGui::Text("Virtual Keyboard");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Based on code posted here: https://gist.github.com/Flix01/78182e9c9e0f9dfad79619e56530568a");
+        if (ImGui::TreeNode("virtual keyboard##VK"))    {
+            static int keyboardLogicalLayoutIndex = ImGui::KLL_QWERTY;
+            static int keyboardPhysicalLayoutIndex = ImGui::KPL_ISO;
+            static ImGui::VirtualKeyboardFlags virtualKeyboardFlags = ImGui::VirtualKeyboardFlags_ShowAllBlocks; // ShowAllBlocks displays all the keyboard parts
+            static ImGuiKey lastKeyReturned = ImGuiKey_COUNT;
+
+            const float w = ImGui::GetContentRegionAvail().x*0.15f;
+            ImGui::SetNextItemWidth(w);
+            ImGui::Combo("Logical Layout##VK",&keyboardLogicalLayoutIndex,ImGui::GetKeyboardLogicalLayoutNames(),ImGui::KLL_COUNT);
+            ImGui::SameLine(0.f,w);
+            ImGui::SetNextItemWidth(w);
+            ImGui::Combo("Physical Layout##VK",&keyboardPhysicalLayoutIndex,ImGui::GetKeyboardPhysicalLayoutNames(),ImGui::KPL_COUNT);
+
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.35f);
+
+            static const char* tooltips[6] = {"ShowBaseBlock","ShowFunctionBlock","ShowArrowBlock","ShowKeypadBlock","NoMouseInteraction","NoKeyboardInteraction"};
+            int flagHovered = -1;
+            if (ImGui::CheckboxFlags("Flags##VKFlags",&virtualKeyboardFlags,6,1,1,0,&flagHovered)) lastKeyReturned = ImGuiKey_COUNT;;
+            if (flagHovered>=0 && flagHovered<6) ImGui::SetTooltip("hold SHIFT to toggle the \"%s\" flag",tooltips[flagHovered]);
+
+            ImGui::Spacing();
+
+            ImGuiKey keyReturned =  ImGuiKey_COUNT;
+
+            const ImVec2 childWindowSize(0,350.f*ImGui::GetFontSize()/18.f);
+            ImGui::SetNextWindowSize(childWindowSize);
+            if (ImGui::BeginChild("VirtualKeyBoardChildWindow##VK",childWindowSize,false,ImGuiWindowFlags_HorizontalScrollbar)) {
+                // Draw an arbitrary keyboard layout to visualize translated keys
+                keyReturned = ImGui::VirtualKeyboard(virtualKeyboardFlags,(ImGui::KeyboardLogicalLayout) keyboardLogicalLayoutIndex,(ImGui::KeyboardPhysicalLayout) keyboardPhysicalLayoutIndex);
+                // ---------------------------------------------------------------
+            }
+            ImGui::EndChild();
+            if (keyReturned!=ImGuiKey_COUNT) lastKeyReturned = keyReturned;
+            if (lastKeyReturned!=ImGuiKey_COUNT) ImGui::Text("Last returned ImGuiKey: \"%s\"",lastKeyReturned==ImGuiKey_None?"NONE":ImGui::GetKeyName(lastKeyReturned));
+
+            ImGui::TreePop();
+        }
+
+        ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
 
@@ -1540,6 +1609,7 @@ void DrawGL()	// Mandatory
         ImGui::Text("%s","Excluded from this build.\n");
 #       endif //NO_IMGUICODEEDITOR
         }
+
 
 #       if (defined(YES_IMGUISTRINGIFIER) && !defined(NO_IMGUIFILESYSTEM) && !defined(NO_IMGUIHELPER)  && !defined(NO_IMGUIHELPER_SERIALIZATION) && !defined(NO_IMGUIHELPER_SERIALIZATION_LOAD))
     if (ImGui::TreeNodeEx("imguistringifier (yes_addon)",collapsingHeaderFlags)) {
@@ -2302,13 +2372,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
             0x0020, 0x00FF, // Basic Latin + Latin Supplement
             0x20AC, 0x20AC,	// €
             0x2122, 0x2122,	// ™
-            0x2196, 0x2196, // ↖
-            0x21D6, 0x21D6, // ⇖
-            0x2B01, 0x2B01, // ⬁
-            0x2B09, 0x2B09, // ⬉
-            0x2921, 0x2922, // ⤡ ⤢
+            // these are used by ImGui::VirtualKeyboard(...) if available----
+            0x2190, 0x2193, // ←↑→↓ arrows + pageUp/pageDown + backspace fallback
+            0x2196, 0x2196, // ↖    home
+            0x21B5, 0x21B5, // ↵    enter
+            0x21B9, 0x21B9, // ↹    tab
+            0x21E4, 0x21E5, // ⇤⇥   tab fallback
+            0x21E7, 0x21E7, // ⇧    shift
+            0x2212, 0x2212, // −    keypad subtract
+            0x2215, 0x2215, // ∗    keypad asterisk
+            0x2B05, 0x2B07, // ⬅⬆⬇
+            0x2302, 0x2302, // ⌂    home fallback
+            0x23CF, 0x23CF, // ⏏    capsLock
+            0x23f8, 0x23f8, // ⏸   pause
+            0x25AE, 0x25AF, // ▮▯   pause fallback
+            // --------------------------------------------------------------
             0x263A, 0x263A, // ☺
             0x266A, 0x266A, // ♪
+            // --------------------------------------------------------------
+            0x27A1, 0x27A1, // ➡
+            0x27F5, 0x27F5, // ⟵    backspace // this is used by ImGui::VirtualKeyboard(...) too
             0
         };
     const float fontSizeInPixels = 18.f;

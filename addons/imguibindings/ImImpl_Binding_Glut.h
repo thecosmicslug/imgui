@@ -201,11 +201,9 @@ static ImGuiKey GlutKeyToImGuiKey(int key)  {
 /*static void GlutUpdateKeyModifiers(){
     ImGuiIO& io = ImGui::GetIO();
     int glut_key_mods = glutGetModifiers();
-    ImGuiKeyModFlags key_mods =
-        ((glut_key_mods & GLUT_ACTIVE_CTRL) ? ImGuiKeyModFlags_Ctrl : 0) |
-        ((glut_key_mods & GLUT_ACTIVE_SHIFT) ? ImGuiKeyModFlags_Shift : 0) |
-        ((glut_key_mods & GLUT_ACTIVE_ALT) ? ImGuiKeyModFlags_Alt : 0);
-    io.AddKeyModsEvent(key_mods);
+    io.AddKeyEvent(ImGuiKey_ModCtrl,(glut_key_mods & GLUT_ACTIVE_CTRL)?true:false);
+    io.AddKeyEvent(ImGuiKey_ModShift,(glut_key_mods & GLUT_ACTIVE_SHIFT)?true:false);
+    io.AddKeyEvent(ImGuiKey_ModAlt,(glut_key_mods & GLUT_ACTIVE_ALT)?true:false);
 }*/
 static void GlutAddKeyEvent(ImGuiKey key, bool down, int native_keycode)    {
     ImGuiIO& io = ImGui::GetIO();
@@ -223,10 +221,13 @@ static void GlutAddKeyEvent(ImGuiKey key, bool down, int native_keycode)    {
     else if (key==ImGuiKey_LeftAlt || key==ImGuiKey_RightAlt)           mod = ImGuiKeyModFlags_Alt;
     else if (key==ImGuiKey_LeftSuper || key==ImGuiKey_RightSuper)       mod = ImGuiKeyModFlags_Super;
     if (mod)    {
-        ImGuiKeyModFlags& keymods = io.KeyModsPrev;
+        static ImGuiKeyModFlags keymods = io.KeyModsPrev;   // or just 0.
         if (down) keymods|=mod;
         else keymods&=~mod;
-        io.AddKeyModsEvent(keymods);    // Add actually just copies 'keyMods' into io.KeyMods AND sets up io.KetCtrl, etc.
+        io.AddKeyEvent(ImGuiKey_ModShift,(keymods&ImGuiKeyModFlags_Shift)?true:false);
+        io.AddKeyEvent(ImGuiKey_ModCtrl,(keymods&ImGuiKeyModFlags_Ctrl)?true:false);
+        io.AddKeyEvent(ImGuiKey_ModAlt,(keymods&ImGuiKeyModFlags_Alt)?true:false);
+        io.AddKeyEvent(ImGuiKey_ModSuper,(keymods&ImGuiKeyModFlags_Super)?true:false);
     }
     //----------------------------------------------------------------------------------------------
 }

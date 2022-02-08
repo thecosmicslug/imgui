@@ -123,7 +123,7 @@ static ImGuiKey ImplSDL2KeycodeToImGuiKey(int keycode) {
         case SDLK_RCTRL: return ImGuiKey_RightCtrl;
         case SDLK_RALT: return ImGuiKey_RightAlt;
         case SDLK_RGUI: return ImGuiKey_RightSuper;
-        case SDLK_MENU: return ImGuiKey_Menu;
+        case SDLK_APPLICATION: return ImGuiKey_Menu;
         case SDLK_0: return ImGuiKey_0;
         case SDLK_1: return ImGuiKey_1;
         case SDLK_2: return ImGuiKey_2;
@@ -319,6 +319,50 @@ I think failing in SDL_Init() when a requested subsystem doesn't work properly i
 	return true;
 }
 
+static void ImplSDL2UpdateGamepads()    {
+    ImGuiIO& io = ImGui::GetIO();
+    if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)  return;
+
+    // Get gamepad
+    io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+    SDL_GameController* game_controller = SDL_GameControllerOpen(0);
+    if (!game_controller)   return;
+    io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+
+    // Update gamepad inputs
+    #define IM_SATURATE(V)                      (V < 0.0f ? 0.0f : V > 1.0f ? 1.0f : V)
+    #define MAP_BUTTON(KEY_NO, BUTTON_NO)       { io.AddKeyEvent(KEY_NO, SDL_GameControllerGetButton(game_controller, BUTTON_NO) != 0); }
+    #define MAP_ANALOG(KEY_NO, AXIS_NO, V0, V1) { float vn = (float)(SDL_GameControllerGetAxis(game_controller, AXIS_NO) - V0) / (float)(V1 - V0); vn = IM_SATURATE(vn); io.AddKeyAnalogEvent(KEY_NO, vn > 0.1f, vn); }
+    const int thumb_dead_zone = 8000;           // SDL_gamecontroller.h suggests using this value.
+    MAP_BUTTON(ImGuiKey_GamepadStart,           SDL_CONTROLLER_BUTTON_START);
+    MAP_BUTTON(ImGuiKey_GamepadBack,            SDL_CONTROLLER_BUTTON_BACK);
+    MAP_BUTTON(ImGuiKey_GamepadFaceDown,        SDL_CONTROLLER_BUTTON_A);              // Xbox A, PS Cross
+    MAP_BUTTON(ImGuiKey_GamepadFaceRight,       SDL_CONTROLLER_BUTTON_B);              // Xbox B, PS Circle
+    MAP_BUTTON(ImGuiKey_GamepadFaceLeft,        SDL_CONTROLLER_BUTTON_X);              // Xbox X, PS Square
+    MAP_BUTTON(ImGuiKey_GamepadFaceUp,          SDL_CONTROLLER_BUTTON_Y);              // Xbox Y, PS Triangle
+    MAP_BUTTON(ImGuiKey_GamepadDpadLeft,        SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+    MAP_BUTTON(ImGuiKey_GamepadDpadRight,       SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
+    MAP_BUTTON(ImGuiKey_GamepadDpadUp,          SDL_CONTROLLER_BUTTON_DPAD_UP);
+    MAP_BUTTON(ImGuiKey_GamepadDpadDown,        SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+    MAP_BUTTON(ImGuiKey_GamepadL1,              SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+    MAP_BUTTON(ImGuiKey_GamepadR1,              SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+    MAP_ANALOG(ImGuiKey_GamepadL2,              SDL_CONTROLLER_AXIS_TRIGGERLEFT,  0.0f, 32767);
+    MAP_ANALOG(ImGuiKey_GamepadR2,              SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 0.0f, 32767);
+    MAP_BUTTON(ImGuiKey_GamepadL3,              SDL_CONTROLLER_BUTTON_LEFTSTICK);
+    MAP_BUTTON(ImGuiKey_GamepadR3,              SDL_CONTROLLER_BUTTON_RIGHTSTICK);
+    MAP_ANALOG(ImGuiKey_GamepadLStickLeft,      SDL_CONTROLLER_AXIS_LEFTX,  -thumb_dead_zone, -32768);
+    MAP_ANALOG(ImGuiKey_GamepadLStickRight,     SDL_CONTROLLER_AXIS_LEFTX,  +thumb_dead_zone, +32767);
+    MAP_ANALOG(ImGuiKey_GamepadLStickUp,        SDL_CONTROLLER_AXIS_LEFTY,  -thumb_dead_zone, -32768);
+    MAP_ANALOG(ImGuiKey_GamepadLStickDown,      SDL_CONTROLLER_AXIS_LEFTY,  +thumb_dead_zone, +32767);
+    MAP_ANALOG(ImGuiKey_GamepadRStickLeft,      SDL_CONTROLLER_AXIS_RIGHTX, -thumb_dead_zone, -32768);
+    MAP_ANALOG(ImGuiKey_GamepadRStickRight,     SDL_CONTROLLER_AXIS_RIGHTX, +thumb_dead_zone, +32767);
+    MAP_ANALOG(ImGuiKey_GamepadRStickUp,        SDL_CONTROLLER_AXIS_RIGHTY, -thumb_dead_zone, -32768);
+    MAP_ANALOG(ImGuiKey_GamepadRStickDown,      SDL_CONTROLLER_AXIS_RIGHTY, +thumb_dead_zone, +32767);
+    #undef MAP_BUTTON
+    #undef MAP_ANALOG
+    #undef IM_SATURATE
+}
+
 
 static void ImImplMainLoopFrame(void* pDone)	{
     ImGuiIO& io = ImGui::GetIO();
@@ -370,13 +414,11 @@ static void ImImplMainLoopFrame(void* pDone)	{
         case SDL_KEYDOWN:
         case SDL_KEYUP:
         {
-            ImGuiKeyModFlags mf = 0;
             SDL_Keymod mod = SDL_GetModState();
-            if ((mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0)   mf|= ImGuiKeyModFlags_Ctrl;
-            if ((mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0) mf|= ImGuiKeyModFlags_Shift;
-            if ((mod & (KMOD_LALT|KMOD_RALT)) != 0)     mf|= ImGuiKeyModFlags_Alt;
-            if ((mod & (KMOD_LGUI|KMOD_RGUI)) != 0)     mf|= ImGuiKeyModFlags_Super;
-            io.AddKeyModsEvent(mf);
+            io.AddKeyEvent(ImGuiKey_ModCtrl,((mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0)?true:false);
+            io.AddKeyEvent(ImGuiKey_ModShift,((mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0)?true:false);
+            io.AddKeyEvent(ImGuiKey_ModAlt,((mod & (KMOD_LALT|KMOD_RALT)) != 0)?true:false);
+            io.AddKeyEvent(ImGuiKey_ModSuper,((mod & (KMOD_LGUI|KMOD_RGUI)) != 0)?true:false);
 
             const bool down = (event.type == SDL_KEYDOWN);
             ImGuiKey key = ImplSDL2KeycodeToImGuiKey(event.key.keysym.sym);
@@ -393,13 +435,11 @@ static void ImImplMainLoopFrame(void* pDone)	{
             break;
         case SDL_MOUSEBUTTONDOWN:        /**< Mouse button pressed */
         case SDL_MOUSEBUTTONUP: {
-            ImGuiKeyModFlags mf = 0;
             SDL_Keymod mod = SDL_GetModState();
-            if ((mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0)   mf|= ImGuiKeyModFlags_Ctrl;
-            if ((mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0) mf|= ImGuiKeyModFlags_Shift;
-            if ((mod & (KMOD_LALT|KMOD_RALT)) != 0)     mf|= ImGuiKeyModFlags_Alt;
-            if ((mod & (KMOD_LGUI|KMOD_RGUI)) != 0)     mf|= ImGuiKeyModFlags_Super;
-            io.AddKeyModsEvent(mf);
+            io.AddKeyEvent(ImGuiKey_ModCtrl,((mod & (KMOD_LCTRL|KMOD_RCTRL)) != 0)?true:false);
+            io.AddKeyEvent(ImGuiKey_ModShift,((mod & (KMOD_LSHIFT|KMOD_RSHIFT)) != 0)?true:false);
+            io.AddKeyEvent(ImGuiKey_ModAlt,((mod & (KMOD_LALT|KMOD_RALT)) != 0)?true:false);
+            io.AddKeyEvent(ImGuiKey_ModSuper,((mod & (KMOD_LGUI|KMOD_RGUI)) != 0)?true:false);
             if (event.button.button>0 && event.button.button<6) {
                 static const int evBtnMap[5]={0,2,1,3,4};
                 //io.MouseDown[ evBtnMap[event.button.button-1] ] = (event.button.type == SDL_MOUSEBUTTONDOWN);   // Old
@@ -509,6 +549,9 @@ static void ImImplMainLoopFrame(void* pDone)	{
         // If needed we must wait (gImGuiInverseFPSClamp-deltaTime) seconds (=> honestly I shouldn't add the * 2.0f factor at the end, but ImGui tells me the wrong FPS otherwise... why? <=)
         else if (inverseFPSClamp>0.f && deltaTime < inverseFPSClamp)  WaitFor((unsigned int) ((inverseFPSClamp-deltaTime)*1000.f * 2.0f) );
     }
+
+    // Update game controllers (if enabled and available)
+    ImplSDL2UpdateGamepads();
 }
 
 // Application code

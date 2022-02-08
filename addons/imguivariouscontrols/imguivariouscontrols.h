@@ -889,6 +889,7 @@ namespace ImGui {
 // pFlagsValues, when used, must be numFlags long, and must contain the flag values (not the flag indices) that the control must use.
 // KNOWN BUG: When ImGui::SameLine() is used after it, the alignment is broken
 IMGUI_API unsigned int CheckboxFlags(const char* label,unsigned int* flags,int numFlags,int numRows,int numColumns,unsigned int flagAnnotations=0,int* itemHoveredOut=NULL,const unsigned int* pFlagsValues=NULL);
+IMGUI_API unsigned int CheckboxFlags(const char* label,int* flags,int numFlags,int numRows,int numColumns,unsigned int flagAnnotations=0,int* itemHoveredOut=NULL,const unsigned int* pFlagsValues=NULL);
 
 // These just differ from the default ones for their look:
 // checkBoxScale.y max is clamped to 2.f
@@ -909,7 +910,7 @@ IMGUI_API void LoadingIndicatorCircle(const char* label, float indicatorRadiusFa
 
 // Posted by @zfedoran here: https://github.com/ocornut/imgui/issues/1901
 // Sligthly modified to provide default behaviour with default args
-void LoadingIndicatorCircle2(const char* label, float indicatorRadiusFactor=1.f, float indicatorRadiusThicknessFactor=1.f, const ImVec4* pOptionalColor=NULL);
+IMGUI_API void LoadingIndicatorCircle2(const char* label, float indicatorRadiusFactor=1.f, float indicatorRadiusThicknessFactor=1.f, const ImVec4* pOptionalColor=NULL);
 
 } // namespace ImGui
 
@@ -934,8 +935,48 @@ namespace ImGui {
 namespace ImGui {
 // ColoredButtonV1: code posted by @ocornut here: https://github.com/ocornut/imgui/issues/4722
 // [Button rounding depends on the FrameRounding Style property (but can be overridden with the last argument)]
-    bool ColoredButtonV1(const char* label, const ImVec2& size, ImU32 text_color, ImU32 bg_color_1, ImU32 bg_color_2, float frame_rounding_override=-1.f);
+    IMGUI_API bool ColoredButtonV1(const char* label, const ImVec2& size, ImU32 text_color, ImU32 bg_color_1, ImU32 bg_color_2, float frame_rounding_override=-1.f);
 }
 
+
+namespace ImGui {
+    // Virtual Keyboard
+    // USAGE: to get started, just call VirtualKeyboard() in one of your ImGui windows
+    enum KeyboardLogicalLayout {
+      KLL_QWERTY = 0,
+      KLL_QWERTZ,
+      KLL_AZERTY,
+      KLL_COUNT
+    };
+    IMGUI_API const char** GetKeyboardLogicalLayoutNames();
+    enum KeyboardPhysicalLayout {
+      KPL_ANSI = 0,
+      KPL_ISO,
+      KPL_JIS,
+      KPL_COUNT
+    };
+    IMGUI_API const char** GetKeyboardPhysicalLayoutNames();
+    enum VirtualKeyboardFlags_ {
+        VirtualKeyboardFlags_ShowBaseBlock       =   1<<0,
+        VirtualKeyboardFlags_ShowFunctionBlock   =   1<<1,
+        VirtualKeyboardFlags_ShowArrowBlock      =   1<<2,  // This can't be excluded when both VirtualKeyboardFlags_BlockBase and VirtualKeyboardFlags_BlockKeypad are used
+        VirtualKeyboardFlags_ShowKeypadBlock     =   1<<3,
+        VirtualKeyboardFlags_ShowAllBlocks        =   VirtualKeyboardFlags_ShowBaseBlock|VirtualKeyboardFlags_ShowFunctionBlock|VirtualKeyboardFlags_ShowArrowBlock|VirtualKeyboardFlags_ShowKeypadBlock,
+        VirtualKeyboardFlags_NoMouseInteraction = 1<<4,
+        VirtualKeyboardFlags_NoKeyboardInteraction = 1<<5,
+        VirtualKeyboardFlags_NoInteraction = VirtualKeyboardFlags_NoMouseInteraction | VirtualKeyboardFlags_NoKeyboardInteraction
+    };
+    typedef int VirtualKeyboardFlags;
+    // Displays a virtual keyboard.
+    // It always returns ImGuiKey_COUNT, unless:
+    //     a) a mouse is clicked (clicked event) on a key AND flag VirtualKeyboardFlags_NoMouseInteraction is not used (DEFAULT)
+    //     b) a key is typed (released event) AND VirtualKeyboardFlags_NoKeyboardInteraction is not used (DEFAULT). Note that multiple keys can be pressed together, but only one is returned.
+    // In that case, it returns the clicked (or typed) key.
+    IMGUI_API ImGuiKey VirtualKeyboard(VirtualKeyboardFlags flags=VirtualKeyboardFlags_ShowAllBlocks,KeyboardLogicalLayout logicalLayout=KLL_QWERTY,KeyboardPhysicalLayout physicalLayout=KPL_ISO);
+
+    // Possible improvements (in random order):
+    // 1) The L-shaped enter key is not displayed perfectly. Improve it.
+    // 2) Add entries to the KeyboardLogicalLayout enum and implement keyboards for specific countries, riducing the number of 'empty' keys present in the general layout.
+}
 
 #endif
