@@ -360,7 +360,7 @@ struct DockContext
                 cursor = ImGuiMouseCursor_ResizeEW;
                 SetCursorScreenPos(ImVec2(dock.pos.x + size0.x, dock.pos.y));
                 InvisibleButton("split", ImVec2(3, dock.size.y));
-                if (dock.status == Status_Dragged) dsize.x = io.MouseDelta.x;
+                if (dock.status == Status_Dragged)    dsize.x = io.MouseDelta.x;
                 dsize.x = -ImMin(-dsize.x, dock.children[0]->size.x - min_size0.x);
                 dsize.x = ImMin(dsize.x, dock.children[1]->size.x - min_size1.x);
                 size0 += dsize;
@@ -392,18 +392,20 @@ struct DockContext
             dock.children[0]->setPosSize(pos0, size0);
             dock.children[1]->setPosSize(pos1, size1);
 
-            if (IsItemHovered()) {
+            const bool hovered = IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped);
+
+            if (hovered) {
                 SetMouseCursor(cursor);
-                SetHoveredID(/*GImGui->CurrentWindow->DC.LastItemId*/GImGui->LastItemData.ID);
+                SetHoveredID(GImGui->LastItemData.ID);
             }
             
-            if (IsItemHovered() && IsMouseClicked(0))
+            if (hovered && IsMouseClicked(0))
             {
                 dock.status = Status_Dragged;
             }
 
             draw_list->AddRectFilled(
-                        GetItemRectMin(), GetItemRectMax(), IsItemHovered() ? color_hovered : color);
+                        GetItemRectMin(), GetItemRectMax(), hovered ? color_hovered : color);
             PopID();
         }
     }

@@ -221,7 +221,7 @@ static void GlutAddKeyEvent(ImGuiKey key, bool down, int native_keycode)    {
     else if (key==ImGuiKey_LeftAlt || key==ImGuiKey_RightAlt)           mod = ImGuiKeyModFlags_Alt;
     else if (key==ImGuiKey_LeftSuper || key==ImGuiKey_RightSuper)       mod = ImGuiKeyModFlags_Super;
     if (mod)    {
-        static ImGuiKeyModFlags keymods = io.KeyModsPrev;   // or just 0.
+        static ImGuiKeyModFlags keymods = io.KeyMods;   // or just 0.
         if (down) keymods|=mod;
         else keymods&=~mod;
         io.AddKeyEvent(ImGuiKey_ModShift,(keymods&ImGuiKeyModFlags_Shift)?true:false);
