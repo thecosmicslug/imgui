@@ -1639,7 +1639,11 @@ const char* ImStrSkipBlank(const char* str)
 // designed using two-passes worst case, which probably could be improved using the stbsp_vsprintfcb() function.)
 #ifdef IMGUI_USE_STB_SPRINTF
 #define STB_SPRINTF_IMPLEMENTATION
+#ifdef IMGUI_STB_SPRINTF_FILENAME
+#include IMGUI_STB_SPRINTF_FILENAME
+#else
 #include "stb_sprintf.h"
+#endif
 #endif
 
 #if defined(_MSC_VER) && !defined(vsnprintf)
@@ -4475,11 +4479,11 @@ void ImGui::Initialize(ImGuiContext* context)
         ini_handler.ReadLineFn = WindowSettingsHandler_ReadLine;
         ini_handler.ApplyAllFn = WindowSettingsHandler_ApplyAll;
         ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
-        g.SettingsHandlers.push_back(ini_handler);
+        AddSettingsHandler(&ini_handler);
     }
 
     // Add .ini handle for ImGuiTable type
-    TableSettingsInstallHandler(context);
+    TableSettingsAddSettingsHandler();
 
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
@@ -8065,7 +8069,6 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
             IM_ASSERT(window->IsFallbackWindow);
             break;
         }
-        IM_ASSERT(window == g.CurrentWindow);
         if (window->Flags & ImGuiWindowFlags_ChildWindow)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing EndChild() for '%s'", window->Name);
@@ -11613,6 +11616,20 @@ ImGuiWindowSettings* ImGui::FindOrCreateWindowSettings(const char* name)
     if (ImGuiWindowSettings* settings = FindWindowSettings(ImHashStr(name)))
         return settings;
     return CreateNewWindowSettings(name);
+}
+
+void ImGui::AddSettingsHandler(const ImGuiSettingsHandler* handler)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(FindSettingsHandler(handler->TypeName) == NULL);
+    g.SettingsHandlers.push_back(*handler);
+}
+
+void ImGui::RemoveSettingsHandler(const char* type_name)
+{
+    ImGuiContext& g = *GImGui;
+    if (ImGuiSettingsHandler* handler = FindSettingsHandler(type_name))
+        g.SettingsHandlers.erase(handler);
 }
 
 ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
