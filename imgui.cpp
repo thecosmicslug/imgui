@@ -101,6 +101,7 @@ CODE
  - Easy to hack and improve.
  - Minimize setup and maintenance.
  - Minimize state storage on user side.
+ - Minimize state synchronization.
  - Portable, minimize dependencies, run on target (consoles, phones, etc.).
  - Efficient runtime and memory consumption.
 
@@ -3697,20 +3698,23 @@ void ImGui::GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeF
 
 ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas)
 {
+    ImGuiContext* prev_ctx = GetCurrentContext();
     ImGuiContext* ctx = IM_NEW(ImGuiContext)(shared_font_atlas);
-    if (GImGui == NULL)
-        SetCurrentContext(ctx);
-    Initialize(ctx);
+    SetCurrentContext(ctx);
+    Initialize();
+    if (prev_ctx != NULL)
+        SetCurrentContext(prev_ctx); // Restore previous context if any, else keep new one.
     return ctx;
 }
 
 void ImGui::DestroyContext(ImGuiContext* ctx)
 {
-    if (ctx == NULL)
-        ctx = GImGui;
-    Shutdown(ctx);
-    if (GImGui == ctx)
-        SetCurrentContext(NULL);
+    ImGuiContext* prev_ctx = GetCurrentContext();
+    if (ctx == NULL) //-V1051
+        ctx = prev_ctx;
+    SetCurrentContext(ctx);
+    Shutdown();
+    SetCurrentContext((prev_ctx != ctx) ? prev_ctx : NULL);
     IM_DELETE(ctx);
 }
 
@@ -4464,9 +4468,9 @@ void ImGui::NewFrame()
     CallContextHooks(&g, ImGuiContextHookType_NewFramePost);
 }
 
-void ImGui::Initialize(ImGuiContext* context)
+void ImGui::Initialize()
 {
-    ImGuiContext& g = *context;
+    ImGuiContext& g = *GImGui;
     IM_ASSERT(!g.Initialized && !g.SettingsLoaded);
 
     // Add .ini handle for ImGuiWindow type
@@ -4496,10 +4500,10 @@ void ImGui::Initialize(ImGuiContext* context)
 }
 
 // This function is merely here to free heap allocations.
-void ImGui::Shutdown(ImGuiContext* context)
+void ImGui::Shutdown()
 {
     // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
-    ImGuiContext& g = *context;
+    ImGuiContext& g = *GImGui;
     if (g.IO.Fonts && g.FontAtlasOwnedByContext)
     {
         g.IO.Fonts->Locked = false;
@@ -4513,12 +4517,7 @@ void ImGui::Shutdown(ImGuiContext* context)
 
     // Save settings (unless we haven't attempted to load them: CreateContext/DestroyContext without a call to NewFrame shouldn't save an empty file)
     if (g.SettingsLoaded && g.IO.IniFilename != NULL)
-    {
-        ImGuiContext* backup_context = GImGui;
-        SetCurrentContext(&g);
         SaveIniSettingsToDisk(g.IO.IniFilename);
-        SetCurrentContext(backup_context);
-    }
 
     CallContextHooks(&g, ImGuiContextHookType_Shutdown);
 
@@ -6181,6 +6180,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // SELECT VIEWPORT
         // FIXME-VIEWPORT: In the docking/viewport branch, this is the point where we select the current viewport (which may affect the style)
+
+        ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)GetMainViewport();
+        SetWindowViewport(window, viewport);
         SetCurrentWindow(window);
 
         // LOCK BORDER SIZE AND PADDING FOR THE FRAME (so that altering them doesn't cause inconsistencies)
@@ -6294,7 +6296,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Calculate the range of allowed position for that window (to be movable and visible past safe area padding)
         // When clamping to stay visible, we will enforce that window->Pos stays inside of visibility_rect.
-        ImGuiViewportP* viewport = (ImGuiViewportP*)(void*)GetMainViewport();
         ImRect viewport_rect(viewport->GetMainRect());
         ImRect viewport_work_rect(viewport->GetWorkRect());
         ImVec2 visibility_padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
@@ -11848,6 +11849,7 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 // [SECTION] VIEWPORTS, PLATFORM WINDOWS
 //-----------------------------------------------------------------------------
 // - GetMainViewport()
+// - SetWindowViewport() [Internal]
 // - UpdateViewportsNewFrame() [Internal]
 // (this section is more complete in the 'docking' branch)
 //-----------------------------------------------------------------------------
@@ -11856,6 +11858,11 @@ ImGuiViewport* ImGui::GetMainViewport()
 {
     ImGuiContext& g = *GImGui;
     return g.Viewports[0];
+}
+
+void ImGui::SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
+{
+    window->Viewport = viewport;
 }
 
 // Update viewports and monitor infos
