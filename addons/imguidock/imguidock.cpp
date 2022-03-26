@@ -392,7 +392,7 @@ struct DockContext
             dock.children[0]->setPosSize(pos0, size0);
             dock.children[1]->setPosSize(pos1, size1);
 
-            const bool hovered = IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped);
+            const bool hovered = IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped);
 
             if (hovered) {
                 SetMouseCursor(cursor);

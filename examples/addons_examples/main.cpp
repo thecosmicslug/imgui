@@ -272,7 +272,7 @@ void DrawGL()	// Mandatory
                 timer+=delta;
                 //-------------------------------------------------------------------
                 if (ImGui::IsKeyDown(ImGuiKey_RightArrow)) {printf("Right arrow pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
-                //if (io.MouseDown[2]) {printf("Middle Mouse Button pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
+                //if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {printf("Middle Mouse Button pressed outside Imgui (%u)\n",myStrangeCounter++);fflush(stdout);}
                 //-------------------------------------------------------------------
             }
         }
@@ -1492,6 +1492,330 @@ void DrawGL()	// Mandatory
         }
 
         ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("Text Effects");
+        if (ImGui::TreeNode("Text Effects"))    {
+            // Actually this is not something contained in imguivariuoscontrols... all the code is here!            
+            // (Experimental Stuff)
+
+            static double timeStart = ImGui::GetTime();
+            double timeNew = ImGui::GetTime();
+
+            static float speed = 5.f;
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.4f);
+            ImGui::SliderFloat("Speed##TWTE",&speed,1.f,30.f,"%.0f");
+            ImGui::SameLine();
+            const bool mustRestart = ImGui::SmallButton("Restart##TWTE");
+
+            bool nodeOpen = ImGui::TreeNode("Typing Effect");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Based on code posted here: https://github.com/ocornut/imgui/issues/5091");
+            if (nodeOpen)   {
+                // Please see https://github.com/ocornut/imgui/issues/5091 for more info
+                static const char* sampleText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+                static const size_t sampleTextLen = strlen(sampleText);
+
+                static double lastTime = timeStart;
+                static size_t lastTextOffset = 0;
+                static double remainder = 0.f;
+                double timePassed = timeNew - lastTime;
+                if (mustRestart || timePassed<0.)    {
+                    timeStart = lastTime = ImGui::GetTime();
+                    lastTextOffset = 0;
+                    remainder = 0;
+                }
+
+                lastTime = timeNew;
+                const double deltaOffsetDouble = (timePassed*speed)+remainder;
+                size_t deltaTextOffset = (size_t) deltaOffsetDouble;
+                remainder = deltaOffsetDouble-(double)deltaTextOffset;
+                lastTextOffset+=deltaTextOffset;
+                if (lastTextOffset>sampleTextLen) lastTextOffset=sampleTextLen;
+
+                //ImVec2 p = ImGui::GetCursorPos();
+
+                //ImGui::TextUnformatted(sampleText, sampleText+textOffset);
+                ImGui::TextWrapped("%.*s", (int)(lastTextOffset), sampleText);
+                //ImGui::Text("%.*s", (int)(textOffset), sampleText);
+
+                //ImGui::SetCursorPos(p);
+                //ImGui::Dummy(ImGui::CalcTextSize(sampleText));  // No way, we'd need a ImGui::CalcTextWrappedSize(...) here to reserve the total space in advance...
+                // (but maybe we can manually add some '\n' to 'sampleText' and use ImGui::Text("%.*s", (int)(textOffset), sampleText) above to make it work).
+                ImGui::TreePop();
+            }
+
+            if (ImGui::TreeNode("Scrolling Effect"))    {
+                // We have prefixed 'sampleText' with a blank space here
+                static const char* sampleText = "                                                                                                    "  \
+                                                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+                static const size_t sampleTextLen = strlen(sampleText);
+
+                static double lastTime = timeStart;
+                static double remainder = 0.f;
+                static const char* startText = sampleText;
+                const char* endText=NULL;
+                double timePassed = timeNew - lastTime;
+                if (mustRestart || timePassed<0.)    {
+                    lastTime = timeStart = timeNew;
+                    remainder = 0;
+                    startText = sampleText;
+                    endText=NULL;
+                }
+
+                lastTime = timeNew;
+                const double deltaOffsetDouble = (timePassed*speed)*8.f+remainder;
+
+                const ImFont* font = ImGui::GetFont();IM_ASSERT(font);
+                const float fontSize = ImGui::GetFontSize();
+                ImVec2 additionalTextSize = font->CalcTextSizeA(fontSize, deltaOffsetDouble, FLT_MAX, startText, NULL,&endText);
+                remainder = deltaOffsetDouble - additionalTextSize.x;
+                IM_ASSERT(remainder>=0.f);
+                startText = endText;
+                if (startText-sampleText>=(long)sampleTextLen)    {
+                    lastTime = timeStart = timeNew;
+                    remainder = 0;
+                    startText = sampleText;
+                    endText=NULL;
+                }
+
+
+                const size_t contentRegionAvailX = ImGui::GetContentRegionAvail().x;
+                const size_t textHeight = additionalTextSize.y;
+
+                ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+
+                ImVec2 p = ImGui::GetCursorScreenPos();
+
+                const float startX = p.x - remainder;   // The second term should make the scrolling smoother (try setting it to zero and see)
+                const float endX = p.x+contentRegionAvailX;
+
+
+                draw_list->PushClipRect(p, ImVec2(endX,p.y+textHeight), true);
+                const ImU32 color = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]);
+                endText = NULL;
+                font->CalcTextSizeA(fontSize, endX, FLT_MAX, startText, NULL,&endText); // Optional line (don't know if it's faster or slower)
+                draw_list->AddText(
+                            ImVec2(startX,p.y),
+                            color,
+                            startText,
+                            endText
+                            );
+                draw_list->PopClipRect();
+
+                ImGui::Dummy(ImVec2(contentRegionAvailX,textHeight));
+
+                ImGui::TreePop();
+            }            
+
+            nodeOpen = ImGui::TreeNode("Dancing Effect");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Inspired by this post: https://github.com/ocornut/imgui/issues/1286");
+            if (nodeOpen)    {
+                // Inspired by: https://github.com/ocornut/imgui/issues/1286
+                ImDrawList* draw_list = ImGui::GetWindowDrawList();
+                ImVector<ImDrawVert>&  verts =  draw_list->VtxBuffer;
+                const size_t vbstart = verts.size();
+
+
+                const size_t contentRegionAvailX = ImGui::GetContentRegionAvail().x;
+                const size_t textHeight = ImGui::GetFontSize()*2.f;
+
+
+
+                ImVec2 p = ImGui::GetCursorScreenPos();
+
+                // Maybe we should clip text with PushClipRect for safety (see the scrolling example)
+                const ImU32 color = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]);
+                draw_list->AddText(
+                            ImVec2(p.x,p.y+textHeight*0.25f),
+                            color,
+                            "Dancing text!"
+                            );
+
+                const size_t vbend = verts.size();IM_ASSERT(vbend>=vbstart);
+
+                ImGui::Dummy(ImVec2(contentRegionAvailX,textHeight));
+
+
+                //----Start Dancing Effect Code (from 'vbstart' and 'vbend')----
+
+
+                // Very bad code! But I don't want to include <math.h> for sin
+                constexpr float sinTable[7] = {0.f,0.2588f,0.5f,0.701f,0.8660f,0.9659f,1.f}; // [0,90°] stepSize = 15°
+                constexpr size_t SinTableSize = sizeof(sinTable)/sizeof(sinTable[0]);
+                IM_ASSERT(SinTableSize>1);
+                constexpr size_t SinTableSizeMinusOne = sizeof(sinTable)/sizeof(sinTable[0]) - 1;
+                constexpr float stepSize = 90.f/SinTableSizeMinusOne;
+                constexpr float stepSizeInverse = 1.f/stepSize;
+                 IM_ASSERT(stepSize*SinTableSizeMinusOne<=90.01f && stepSize*SinTableSizeMinusOne>=89.99f);
+
+                const float A = textHeight*0.25;
+                for (size_t i=0,iSz=vbend-vbstart;i<iSz;i++)  {
+                    ImVec2& pos = verts[vbstart+i].pos;
+
+                    float arg = (float)(i/4+1) * timeNew * speed * 5.f; // 4 vertices makes a character
+                    while (arg<0.f) arg+=360.f;
+                    while (arg>=360.f) arg-=360.f;
+                    float sign = 1.0;
+                    IM_ASSERT(arg>=0.0 && arg<=360.0);
+                    if (arg>180.f)  {
+                        sign = -1.0;
+                        if (arg<270.f) arg-=180.f;  // to check
+                        else arg=360.f-arg;         // to check
+                        IM_ASSERT(arg>=0.0 && arg<=90.0);
+                    }
+                    else if (arg>90.f) arg=180.f-arg;   // sin (90+x) = sin(90-x) -> arg=180.f-arg
+                    IM_ASSERT(arg>=0.0 && arg<=90.0);
+
+                    const float argOnStepSize = arg*stepSizeInverse;  // 15.f if the width of the interval in degrees
+                    const size_t j = (size_t) argOnStepSize;  // floor
+                    IM_ASSERT(j<SinTableSizeMinusOne);
+                    const float deltaLow = argOnStepSize - (float)j;  // difference from 'arg' to its lower bound (snapped to 'stepSize') in [0,1]
+                    IM_ASSERT(deltaLow>=0.0f && deltaLow<=1.0f);
+
+                    arg = (1.f-deltaLow)*sinTable[j]+deltaLow*sinTable[j+1];    // lerp
+                    IM_ASSERT(arg>=0.0 && arg<=1.0);
+                    arg*=sign;
+
+                    pos.y += A*arg;
+                }
+
+                //----End Dancing Effect Code-----------------------------------
+
+                ImGui::TreePop();
+            }
+
+            nodeOpen = ImGui::TreeNode("Rotation Effect");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s","Inspired by this post: https://github.com/ocornut/imgui/issues/1286");
+            if (nodeOpen)    {
+                // Inspired by: https://github.com/ocornut/imgui/issues/1286
+                static const char* sampleText = "ROTATION";
+                const ImVec2 sampleTextSize = ImGui::CalcTextSize(sampleText);
+                const ImVec2 bounds(sampleTextSize.x,sampleTextSize.x);
+
+
+                ImDrawList* draw_list = ImGui::GetWindowDrawList();
+                ImVector<ImDrawVert>&  verts =  draw_list->VtxBuffer;
+                const size_t vbstart = verts.size();
+
+                const ImVec2 p = ImGui::GetCursorScreenPos();
+                const ImVec2 textPos = ImVec2(p.x,p.y+(bounds.y-sampleTextSize.y)*0.5f);
+
+                // Maybe we should clip text with PushClipRect for safety (see the scrolling example)
+                const ImU32 color = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]);
+                draw_list->AddText(
+                            textPos,
+                            color,
+                            sampleText
+                            );
+
+                const size_t vbend = verts.size();IM_ASSERT(vbend>=vbstart);
+
+                ImGui::Dummy(bounds);
+
+                //----Start Rotation Effect Code (from 'textPos', 'vbstart' and 'vbend')----
+
+                const ImVec2 rotationCenter(textPos.x+bounds.x*0.5f,textPos.y+sampleTextSize.y*0.5f);
+
+
+                static double relativeTime = timeNew;
+                static float orientationDegrees = 0.f;
+                if (mustRestart) relativeTime = timeNew;
+                float elapsed = (timeNew-relativeTime);
+                relativeTime = timeNew;
+
+                orientationDegrees+= elapsed * speed * 5.f;
+
+
+                float sinArg=0.f,cosArg=1.f;
+
+                // Manual calculation of 'sinArg' and 'cosArg' without including <math.h>
+                // => It also puts 'orientationDegrees' in the [0°,360°] range
+                // If you just replace this code with sin(orientationDegrees*M_PI/180.f) and cos(orientationDegrees*M_PI/180.f), you may want
+                // to put 'orientationDegrees' in the  [0°,360°] range too, or just use: orientationDegrees=timeNew*speed*5.f; to simplify code.
+                {
+                    // Tweakable to improve precision:----------------------------------------
+                    //constexpr float sinTable[] = {0.f,0.258819f,0.5f,0.707107f,0.866025f,0.965926f,1.f}; // [0,90°] stepSize = 15°
+                    constexpr float sinTable[] = {
+                        0.f,0.087156f,0.173648f,0.258819f,0.34202f,0.422618f,0.5f,      // [0°,30°]     stepSize = 5°
+                        0.573576f,0.642788f,0.707107f,0.766044f,0.819152f,0.866025f,    // [35°,60°]    stepSize = 5°
+                        0.906308f,0.939693f,0.965926f,0.984808f,0.996195f,1.f           // [65°,90°]    stepSize = 5°
+                    }; // [0,90°] stepSize = 5°
+                    // ------------------------------------------------------------------------
+
+                    constexpr size_t SinTableSize = sizeof(sinTable)/sizeof(sinTable[0]);
+                    IM_ASSERT(SinTableSize>1);
+                    constexpr size_t SinTableSizeMinusOne = sizeof(sinTable)/sizeof(sinTable[0]) - 1;
+                    constexpr float stepSize = 90.f/SinTableSizeMinusOne;
+                    constexpr float stepSizeInverse = 1.f/stepSize;
+                     IM_ASSERT(stepSize*SinTableSizeMinusOne<=90.01f && stepSize*SinTableSizeMinusOne>=89.99f);
+                    // It's: cosTable[a] = sinTable[SinTableSizeMinusOne-a] // for angles in [0,90°]
+
+                    while (orientationDegrees<0.f) orientationDegrees+=360.f;       // to replace fmodf
+                    while (orientationDegrees>=360.f) orientationDegrees-=360.f;
+                    float arg =orientationDegrees;
+                    float signSin = 1.0;float signCos = 1.0;
+                    IM_ASSERT(arg>=0.0 && arg<=360.0);
+                    if (arg>180.f)  {
+                        signSin = -1.0;
+                        if (arg<270.f) {
+                            arg-=180.f;
+                            signCos = -1.0;
+                        }
+                        else {
+                            arg=360.f-arg;
+                            signCos = 1.0;
+                        }
+                        IM_ASSERT(arg>=0.0 && arg<=90.0);
+                    }
+                    else if (arg>90.f) {
+                        arg=180.f-arg;   // sin (90+x) = sin(90-x) -> arg=180.f-arg
+                        signCos = -1.0;
+                    }
+                    IM_ASSERT(arg>=0.0 && arg<=90.0);
+
+                    const float argOnStepSize = arg*stepSizeInverse;  // 15.f if the width of the interval in degrees
+                    const size_t j = (size_t) argOnStepSize;  // floor
+                    IM_ASSERT(j<SinTableSizeMinusOne);
+                    const float deltaLow = argOnStepSize - (float)j;  // difference from 'arg' to its lower bound (snapped to 'stepSize') in [0,1]
+                    IM_ASSERT(deltaLow>=0.0f && deltaLow<=1.0f);
+
+                    sinArg = (1.f-deltaLow)*sinTable[j]+deltaLow*sinTable[j+1];    // lerp
+                    IM_ASSERT(sinArg>=0.0 && sinArg<=1.0);
+                    sinArg*=signSin;
+
+                    const float cosTableJ = sinTable[SinTableSizeMinusOne-j];
+                    const float cosTableJPlusOne = sinTable[SinTableSizeMinusOne-(j+1)];
+                    cosArg = (1.f-deltaLow)*cosTableJ+deltaLow*cosTableJPlusOne;    // lerp
+                    IM_ASSERT(cosArg>=0.0 && cosArg<=1.0);
+                    cosArg*=signCos;
+                }
+                // End Manual calculation code
+
+                for (size_t i=0,iSz=vbend-vbstart;i<iSz;i++)  {
+                    ImVec2& pos = verts[vbstart+i].pos;                    
+                    const ImVec2 offset(pos.x-rotationCenter.x,pos.y-rotationCenter.y);
+                    pos = ImVec2(rotationCenter.x+(offset.x*cosArg-offset.y*sinArg),
+                                 rotationCenter.y+(offset.x*sinArg+offset.y*cosArg));
+                }
+
+                //----End Rotation Effect Code-----------------------------------
+
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("orientation: %1.2f° (sin:%1.3f,cos:%1.3f)",orientationDegrees,sinArg,cosArg);
+
+                // Drawback: it wastes too much screen space... better try an alternative 'dancing effect' by
+                // rotating contiguous characters a bit CW and CCW... left as an exercise.
+
+                // This technique can probably be applied to texture images too
+                // (even if, if we use draw_list->AddImageQuad(...) that takes all 4 vertices, we can just rotate them before the call)
+
+                ImGui::TreePop();
+            }
+
+            ImGui::TreePop();
+        }
+
+
+        //ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
 
