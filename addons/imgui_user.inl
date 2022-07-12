@@ -86,9 +86,9 @@
 #ifndef NO_IMGUISTYLESERIALIZER
 #include "./imguistyleserializer/imguistyleserializer.cpp"
 #endif //NO_IMGUISTYLESERIALIZER
-#ifndef NO_IMGUIDATECHOOSER
-#include "./imguidatechooser/imguidatechooser.cpp"
-#endif //NO_IMGUIDATECHOOSER
+#ifndef NO_IMGUIDATETIME
+#include "./imguidatetime/imguidatetime.cpp"
+#endif //NO_IMGUIDATETIME
 #ifndef NO_IMGUICODEEDITOR
 #include "./imguicodeeditor/imguicodeeditor.cpp"
 #endif //NO_IMGUICODEEDITOR
