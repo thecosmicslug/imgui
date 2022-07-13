@@ -1,7 +1,7 @@
 #include <imgui.h>
-#ifndef NO_IMGUIDATETIME
-#include <time.h>   // very common plain c header file used only by datetime widget
-#endif //NO_IMGUIDATETIME
+#ifndef NO_IMGUIDATECHOOSER
+#include <time.h>   // very common plain c header file used only by DateChooser
+#endif //NO_IMGUIDATECHOOSER
 
 
 // Helper stuff we'll use later ----------------------------------------------------
@@ -661,9 +661,9 @@ void DrawGL()	// Mandatory
         }
 #       endif //YES_IMGUITINYFILEDIALOGS
 
-        // Datetime Test:
-        if (ImGui::TreeNodeEx("imguidatetime",collapsingHeaderFlags)) {
-#       ifndef NO_IMGUIDATETIME
+        // DateChooser Test:
+        if (ImGui::TreeNodeEx("imguidatechooser",collapsingHeaderFlags)) {
+#       ifndef NO_IMGUIDATECHOOSER
         /*struct tm {
   int tm_sec;			 Seconds.	[0-60] (1 leap second)
   int tm_min;			 Minutes.	[0-59]
@@ -679,7 +679,7 @@ void DrawGL()	// Mandatory
         ImGui::SameLine();
         static tm myDate={};       // IMPORTANT: must be static! (plenty of compiler warnings here if we write: static tm myDate={0}; Is there any difference?)
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.5f);
-        if (ImGui::InputDate("Date ##MyDate",myDate,"%d/%m/%Y")) {
+        if (ImGui::DateChooser("Date Chooser##MyDateChooser",myDate,"%d/%m/%Y")) {
             // A new date has been chosen
             //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate.tm_mday,myDate.tm_mon+1,myDate.tm_year+1900);
         }
@@ -687,19 +687,19 @@ void DrawGL()	// Mandatory
 
         ImGui::Spacing();
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("Choose another date with time:");
+        ImGui::Text("Choose another date:");
         ImGui::SameLine();
         static tm myDate2={};       // IMPORTANT: must be static! (plenty of compiler warnings here if we write: static tm myDate={0}; Is there any difference?)
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x*0.5f);
-        if (ImGui::InputDateTime("##MyDate2",myDate2,"%d/%m/%Y %H:%M")) {
+        if (ImGui::DateChooser("##MyDateChooser2",myDate2,"%d/%m/%Y")) {
             // A new date has been chosen
             //fprintf(stderr,"A new date has been chosen exacty now: \"%.2d-%.2d-%.4d\"\n",myDate2.tm_mday,myDate2.tm_mon+1,myDate2.tm_year+1900);
         }
         ImGui::Text("Chosen date2: \"%.2d-%.2d-%.4d\"",myDate2.tm_mday,myDate2.tm_mon+1,myDate2.tm_year+1900);
 
-#       else       //NO_IMGUIDATETIME
+#       else       //NO_IMGUIDATECHOOSER
         ImGui::Text("%s","Excluded from this build.\n");
-#       endif      //NO_IMGUIDATETIME
+#       endif      //NO_IMGUIDATECHOOSER
         ImGui::TreePop();
         }
 
@@ -2669,7 +2669,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine,
     // [Optional] Here we just set some fields in the C locale to native (""). The default C locale is ("C"), which is ASCII English AFAIK.
     setlocale(LC_CTYPE, "");        // This might affect the encoding of the imguifilesystem paths (but I'm not sure about it...) [Docs say: selects the character classification category of the C locale]
     //setlocale(LC_COLLATE, "");    // ??? This probably affects the way items are sorted
-    setlocale(LC_TIME, "");         // This affects imguidatetime (the language of the names of the months)
+    setlocale(LC_TIME, "");         // This affects imguidatechooser (the language of the names of the months)
 #   endif //__EMSCRIPTEN__
 
 /*#   ifdef IMGUI_ENABLE_FREETYPE    // Testing only (to remove)

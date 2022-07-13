@@ -43,9 +43,9 @@
 #   if (!defined(YES_IMGUIFILESYSTEM) && !defined(NO_IMGUIFILESYSTEM))
 #       define NO_IMGUIFILESYSTEM
 #   endif //YES_IMGUIFILESYSTEM
-#   if (!defined(YES_IMGUIDATETIME) && !defined(NO_IMGUIDATETIME))
-#       define NO_IMGUIDATETIME
-#   endif //YES_IMGUIDATETIME
+#   if (!defined(YES_IMGUIDATECHOOSER) && !defined(NO_IMGUIDATECHOOSER))
+#       define NO_IMGUIDATECHOOSER
+#   endif //YES_IMGUIDATECHOOSER
 #   if (!defined(YES_IMGUILISTVIEW) && !defined(NO_IMGUILISTVIEW))
 #       define NO_IMGUILISTVIEW
 #   endif //YES_IMGUILISTVIEW
@@ -193,9 +193,9 @@ inline void operator delete(void*, ImImplPlacementNewDummy, void*) {}
 #ifndef NO_IMGUISTYLESERIALIZER
 #include "./imguistyleserializer/imguistyleserializer.h"
 #endif //NO_IMGUISTYLESERIALIZER
-#ifndef NO_IMGUIDATETIME
-#include "./imguidatetime/imguidatetime.h"
-#endif //NO_IMGUIDATETIME
+#ifndef NO_IMGUIDATECHOOSER
+#include "./imguidatechooser/imguidatechooser.h"
+#endif //NO_IMGUIDATECHOOSER
 #ifndef NO_IMGUICODEEDITOR
 #include "./imguicodeeditor/imguicodeeditor.h"
 #endif //NO_IMGUICODEEDITOR
